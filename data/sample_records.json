@@ -1,30 +1,29 @@
-
 [
   {
     "id": "001",
-    "document": "",
-    "hazard": "",
-    "phase": "",
-    "action": "",
-    "responsible": "",
-    "warning_stage": ""
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Keep mobile phones charged, store important documents and valuables in waterproof containers, and prepare an emergency kit.",
+    "responsible": "Residents",
+    "warning_stage": null
   },
   {
     "id": "002",
-    "document": "",
-    "hazard": "",
-    "phase": "",
-    "action": "",
-    "responsible": "",
-    "warning_stage": ""
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Identify the nearest safe shelter or high ground and the safest route. Evacuate when directed by government officials.",
+    "responsible": "Residents and local authorities",
+    "warning_stage": null
   },
   {
     "id": "003",
-    "document": "",
-    "hazard": "",
-    "phase": "",
-    "action": "",
-    "responsible": "",
-    "warning_stage": ""
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "Keep doors and windows shut, switch off electrical mains when advised, and follow official warnings.",
+    "responsible": "Residents",
+    "warning_stage": null
   }
 ]
