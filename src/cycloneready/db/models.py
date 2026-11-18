@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -44,7 +45,9 @@ class Document(Base):
     published_on: Mapped[date | None]
     sha256: Mapped[str] = mapped_column(String(64), index=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column(
-        "metadata", JSONB, server_default=text("'{}'::jsonb")
+        "metadata",
+        JSON().with_variant(JSONB, "postgresql"),
+        server_default=text("'{}'"),
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

@@ -1,7 +1,11 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
+from cycloneready.api.deps import get_db_session
 from cycloneready.api.main import create_app
 from cycloneready.config import Settings
 
@@ -12,17 +16,30 @@ def test_health_is_ok(client):
     assert r.json()["status"] == "ok"
 
 
-def test_ready_when_records_loaded(client):
+def test_ready_when_database_available(client):
     r = client.get("/ready")
     assert r.status_code == 200
-    assert r.json()["checks"]["records_loaded"] is True
+    assert r.json()["checks"]["database"] is True
 
 
-def test_ready_is_503_when_data_file_missing(tmp_path):
-    settings = Settings(app_env="ci", data_file=tmp_path / "missing.json")
-    with TestClient(create_app(settings)) as c:
-        assert c.get("/health").status_code == 200  # alive...
-        assert c.get("/ready").status_code == 503  # ...but not ready
+def test_ready_is_503_when_database_unavailable(tmp_path):
+    settings = Settings(
+        app_env="ci",
+        database_url=f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}",
+    )
+
+    app = create_app(settings)
+
+    async def unavailable_session():
+        session = AsyncMock()
+        session.execute.side_effect = SQLAlchemyError("Database unavailable")
+        yield session
+
+    app.dependency_overrides[get_db_session] = unavailable_session
+
+    with TestClient(app) as c:
+        assert c.get("/health").status_code == 200
+        assert c.get("/ready").status_code == 503
 
 
 def test_list_documents_paginates(client):

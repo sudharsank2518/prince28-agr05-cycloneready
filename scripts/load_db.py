@@ -1,73 +1,83 @@
-"""Load data/sample_records.json into Postgres.
-
-Safe to run again and again: new records are inserted, changed ones updated,
-unchanged ones skipped (we compare a sha256 fingerprint of each record).
-Run: uv run python scripts/load_db.py
-"""
+"""Load sample records into PostgreSQL using SHA-256 fingerprints."""
 
 import asyncio
 import hashlib
 import json
-from datetime import date
+from pathlib import Path
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from cycloneready.config import get_settings
 from cycloneready.db.models import Document
 from cycloneready.db.session import make_engine, make_sessionmaker
 
-TITLE_FIELD = "document"
-KNOWN = {"id", "title", "source_url", "licence", "doc_type", "published_on"}
-
 
 def fingerprint(record: dict) -> str:
-    canonical = json.dumps(record, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def to_row(record: dict) -> dict:
-    published = record.get("published_on")
-    return {
-        "external_id": str(record["id"]),
-        "title": str(record.get("title") or record.get(TITLE_FIELD) or record["id"]),
-        "source_url": record.get("source_url"),
-        "licence": record.get("licence"),
-        "doc_type": record.get("doc_type") or "record",
-        "published_on": date.fromisoformat(published) if published else None,
-        "sha256": fingerprint(record),
-        "metadata_": {k: v for k, v in record.items() if k not in KNOWN},
-    }
+    content = json.dumps(record, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(content).hexdigest()
 
 
 async def main() -> None:
     settings = get_settings()
-    records = json.loads(settings.data_file.read_text(encoding="utf-8"))
     engine = make_engine(settings)
-    session_factory = make_sessionmaker(engine)
+    sessionmaker = make_sessionmaker(engine)
 
-    inserted = updated = unchanged = 0
+    inserted = 0
+    updated = 0
+    unchanged = 0
 
-    async with session_factory() as session, session.begin():
-        rows = await session.execute(select(Document.external_id, Document.sha256))
-        existing = dict(rows.all())
+    try:
+        records = json.loads(Path(settings.data_file).read_text(encoding="utf-8"))
 
-        for record in records:
-            row = to_row(record)
-            old = existing.get(row["external_id"])
+        async with sessionmaker() as session:
+            for record in records:
+                record_hash = fingerprint(record)
 
-            if old is None:
-                session.add(Document(**row))
-                inserted += 1
-            elif old != row["sha256"]:
-                await session.execute(
-                    update(Document).where(Document.external_id == row["external_id"]).values(**row)
+                result = await session.execute(
+                    select(Document).where(Document.external_id == str(record["id"]))
                 )
-                updated += 1
-            else:
-                unchanged += 1
+                document = result.scalar_one_or_none()
 
-    await engine.dispose()
-    print(f"records={len(records)} inserted={inserted} updated={updated} unchanged={unchanged}")
+                metadata = {
+                    key: value
+                    for key, value in record.items()
+                    if key
+                    not in {"id", "title", "source_url", "licence", "doc_type", "published_on"}
+                }
+
+                if document is None:
+                    document = Document(
+                        external_id=str(record["id"]),
+                        title=record.get("title", record.get("document", "")),
+                        source_url=record.get("source_url"),
+                        licence=record.get("licence"),
+                        doc_type=record.get("doc_type", "record"),
+                        published_on=record.get("published_on"),
+                        metadata_=metadata,
+                        sha256=record_hash,
+                    )
+                    session.add(document)
+                    inserted += 1
+
+                elif document.sha256 != record_hash:
+                    document.title = record.get("title", record.get("document", ""))
+                    document.source_url = record.get("source_url")
+                    document.licence = record.get("licence")
+                    document.doc_type = record.get("doc_type", "record")
+                    document.published_on = record.get("published_on")
+                    document.metadata_ = metadata
+                    document.sha256 = record_hash
+                    updated += 1
+
+                else:
+                    unchanged += 1
+
+            await session.commit()
+
+        print(f"records={len(records)} inserted={inserted} updated={updated} unchanged={unchanged}")
+
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":
