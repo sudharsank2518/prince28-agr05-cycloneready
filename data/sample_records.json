@@ -1,29 +1,203 @@
+
 [
   {
     "id": "001",
     "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
     "hazard": "Cyclone",
     "phase": "Before Cyclone",
-    "action": "Keep mobile phones charged, store important documents and valuables in waterproof containers, and prepare an emergency kit.",
+    "action": "Keep mobile phones fully charged during emergencies",
     "responsible": "Residents",
-    "warning_stage": null
+    "warning_stage": ""
   },
   {
     "id": "002",
     "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
     "hazard": "Cyclone",
     "phase": "Before Cyclone",
-    "action": "Identify the nearest safe shelter or high ground and the safest route. Evacuate when directed by government officials.",
-    "responsible": "Residents and local authorities",
-    "warning_stage": null
+    "action": "Keep important documents and valuables in waterproof containers.",
+    "responsible": "Residents",
+    "warning_stage": ""
   },
   {
     "id": "003",
     "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Prepare an emergency kit containing essential items required for safety and survival.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "004",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Store adequate ready-to-eat food and drinking water to last at least one week.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "005",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Secure the house, especially the roof, carry out necessary repairs, and secure movable objects.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "006",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Identify the nearest safe high ground or shelter and the safest route to reach it.",
+    "responsible": "Residents and local authorities",
+    "warning_stage": ""
+  },
+  {
+    "id": "007",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
     "hazard": "Cyclone",
     "phase": "During Cyclone",
-    "action": "Keep doors and windows shut, switch off electrical mains when advised, and follow official warnings.",
+    "action": "Switch off electrical mains, unplug electrical appliances, and disconnect gas connections when taking shelter indoors.",
     "responsible": "Residents",
-    "warning_stage": null
+    "warning_stage": ""
+  },
+  {
+    "id": "008",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "Keep doors and windows securely closed during the cyclone.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "009",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "Listen to radio broadcasts and rely only on official cyclone warnings instead of rumours.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "010",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "If a building starts to crumble, protect yourself with mattresses or blankets, or get under a strong table or bench.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "011",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "If outdoors, seek a safe shelter as soon as possible and do not enter damaged buildings.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "012",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "After Cyclone",
+    "action": "Do not go outside or return home after evacuation until authorities officially advise that it is safe.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "013",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "After Cyclone",
+    "action": "Drink boiled or chlorinated water to reduce the risk of waterborne diseases.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "014",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "After Cyclone",
+    "action": "Watch out for broken electric poles, loose electrical wires, and sharp objects.",
+    "responsible": "Residents",
+    "warning_stage": ""
+  },
+  {
+    "id": "015",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Before Cyclone",
+    "action": "Keep boats and rafts tied securely in a safe place.",
+    "responsible": "Fishermen",
+    "warning_stage": ""
+  },
+  {
+    "id": "016",
+    "document": "NDMA - Cyclone Dos and Don'ts",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "During Cyclone",
+    "action": "Do not venture into the sea during cyclone conditions or disturbed weather.",
+    "responsible": "Fishermen",
+    "warning_stage": ""
+  },
+  {
+    "id": "017",
+    "document": "IMD - Four Stage Cyclone Warning",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Early Warning",
+    "action": "Issue a Pre-Cyclone Watch 72 hours before the expected commencement of adverse weather to provide early information about a developing cyclone.",
+    "responsible": "India Meteorological Department",
+    "warning_stage": "Pre-Cyclone Watch"
+  },
+  {
+    "id": "018",
+    "document": "IMD - Four Stage Cyclone Warning",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Warning",
+    "action": "Issue a Cyclone Alert at least 48 hours before expected adverse weather over coastal areas and provide information about the storm and affected districts.",
+    "responsible": "India Meteorological Department",
+    "warning_stage": "Cyclone Alert - Yellow"
+  },
+  {
+    "id": "019",
+    "document": "IMD - Four Stage Cyclone Warning",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Warning",
+    "action": "Issue a Cyclone Warning at least 24 hours before expected adverse weather, including likely landfall information and associated hazards.",
+    "responsible": "India Meteorological Department",
+    "warning_stage": "Cyclone Warning - Orange"
+  },
+  {
+    "id": "020",
+    "document": "IMD - Four Stage Cyclone Warning",
+    "source_url": null,
+    "hazard": "Cyclone",
+    "phase": "Post Landfall",
+    "action": "Issue a Post Landfall Outlook at least 12 hours before expected landfall, describing the likely movement of the cyclone inland and expected adverse weather.",
+    "responsible": "India Meteorological Department",
+    "warning_stage": "Post Landfall Outlook - Red"
   }
 ]
