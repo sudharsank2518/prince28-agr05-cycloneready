@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,9 +11,24 @@ from cycloneready.config import Settings
 from cycloneready.db.models import Base, Document
 
 SAMPLE = [
-    {"id": "001", "title": "Alpha guideline", "year": 2023},
-    {"id": "002", "title": "Beta circular", "year": 2024},
-    {"id": "003", "title": "Gamma notice", "year": 2025},
+    {
+        "id": "001",
+        "title": "Alpha guideline",
+        "year": 2023,
+        "published_on": "2023-01-15",
+    },
+    {
+        "id": "002",
+        "title": "Beta circular",
+        "year": 2024,
+        "published_on": "2024-06-20",
+    },
+    {
+        "id": "003",
+        "title": "Gamma notice",
+        "year": 2025,
+        "published_on": "2025-12-10",
+    },
 ]
 
 
@@ -43,6 +59,7 @@ def client(tmp_path):
                         external_id=record["id"],
                         title=record["title"],
                         doc_type="record",
+                        published_on=date.fromisoformat(record["published_on"]),
                         sha256=fingerprint,
                         metadata_={"year": record["year"]},
                     )

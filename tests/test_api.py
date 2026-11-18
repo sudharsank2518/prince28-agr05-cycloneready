@@ -86,3 +86,30 @@ def test_app_refuses_to_start_without_app_env(monkeypatch):
     monkeypatch.delenv("APP_ENV", raising=False)
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_sort_documents_by_title(client):
+    r = client.get("/v1/documents", params={"sort": "title"})
+
+    assert r.status_code == 200
+    titles = [d["title"] for d in r.json()["items"]]
+
+    assert titles == sorted(titles)
+
+
+def test_sort_documents_by_published_on_descending(client):
+    r = client.get("/v1/documents", params={"sort": "-published_on"})
+
+    assert r.status_code == 200
+
+    items = r.json()["items"]
+
+    assert r.json()["total"] == 3
+
+    dates = [item["published_on"] for item in items]
+
+    assert dates == [
+        "2025-12-10",
+        "2024-06-20",
+        "2023-01-15",
+    ]

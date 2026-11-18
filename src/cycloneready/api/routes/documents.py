@@ -14,9 +14,17 @@ async def list_documents(
     q: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
+    sort: Annotated[str | None, Query()] = None,
 ) -> dict:
     repository = DocumentRepository(session)
-    rows, total = await repository.search(q, limit, offset)
+
+    try:
+        rows, total = await repository.search(q, limit, offset, sort)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
     return {
         "total": total,
