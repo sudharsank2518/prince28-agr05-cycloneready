@@ -15,6 +15,7 @@ class DocumentRepository:
         query: str | None = None,
         limit: int = 20,
         offset: int = 0,
+        sort: str | None = None,
     ) -> tuple[list[dict], int]:
         statement = select(Document)
 
@@ -22,13 +23,34 @@ class DocumentRepository:
             statement = statement.where(Document.title.ilike(f"%{query}%"))
 
         count_statement = select(Document.id)
+
         if query:
             count_statement = count_statement.where(Document.title.ilike(f"%{query}%"))
 
         total_result = await self.session.execute(count_statement)
         total = len(total_result.scalars().all())
 
-        statement = statement.order_by(Document.id).limit(limit).offset(offset)
+        # Sorting options
+        sort_columns = {
+            "title": Document.title,
+            "published_on": Document.published_on,
+        }
+
+        if sort:
+            descending = sort.startswith("-")
+            field = sort[1:] if descending else sort
+
+            if field not in sort_columns:
+                raise ValueError("Invalid sort field")
+
+            column = sort_columns[field]
+
+            statement = statement.order_by(column.desc() if descending else column.asc())
+        else:
+            # Preserve the original default ordering
+            statement = statement.order_by(Document.id)
+
+        statement = statement.limit(limit).offset(offset)
 
         result = await self.session.execute(statement)
         documents = result.scalars().all()
