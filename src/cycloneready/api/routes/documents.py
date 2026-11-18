@@ -2,30 +2,42 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
-from cycloneready.api.deps import StoreDep
+from cycloneready.api.deps import DbSessionDep
+from cycloneready.db.repository import DocumentRepository
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 @router.get("")
-def list_documents(
-    store: StoreDep,
+async def list_documents(
+    session: DbSessionDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
-    rows = store.search(q)
+    repository = DocumentRepository(session)
+    rows, total = await repository.search(q, limit, offset)
+
     return {
-        "total": len(rows),
+        "total": total,
         "limit": limit,
         "offset": offset,
-        "items": rows[offset : offset + limit],
+        "items": rows,
     }
 
 
 @router.get("/{doc_id}")
-def get_document(doc_id: str, store: StoreDep) -> dict:
-    record = store.get(doc_id)
+async def get_document(
+    doc_id: str,
+    session: DbSessionDep,
+) -> dict:
+    repository = DocumentRepository(session)
+    record = await repository.get(doc_id)
+
     if record is None:
-        raise HTTPException(status_code=404, detail=f"No document with id '{doc_id}'.")
+        raise HTTPException(
+            status_code=404,
+            detail=f"No document with id '{doc_id}'.",
+        )
+
     return record

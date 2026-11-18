@@ -1,0 +1,84 @@
+"""Load sample records into PostgreSQL using SHA-256 fingerprints."""
+
+import asyncio
+import hashlib
+import json
+from pathlib import Path
+
+from sqlalchemy import select
+
+from cycloneready.config import get_settings
+from cycloneready.db.models import Document
+from cycloneready.db.session import make_engine, make_sessionmaker
+
+
+def fingerprint(record: dict) -> str:
+    content = json.dumps(record, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(content).hexdigest()
+
+
+async def main() -> None:
+    settings = get_settings()
+    engine = make_engine(settings)
+    sessionmaker = make_sessionmaker(engine)
+
+    inserted = 0
+    updated = 0
+    unchanged = 0
+
+    try:
+        records = json.loads(Path(settings.data_file).read_text(encoding="utf-8"))
+
+        async with sessionmaker() as session:
+            for record in records:
+                record_hash = fingerprint(record)
+
+                result = await session.execute(
+                    select(Document).where(Document.external_id == str(record["id"]))
+                )
+                document = result.scalar_one_or_none()
+
+                metadata = {
+                    key: value
+                    for key, value in record.items()
+                    if key
+                    not in {"id", "title", "source_url", "licence", "doc_type", "published_on"}
+                }
+
+                if document is None:
+                    document = Document(
+                        external_id=str(record["id"]),
+                        title=record.get("title", record.get("document", "")),
+                        source_url=record.get("source_url"),
+                        licence=record.get("licence"),
+                        doc_type=record.get("doc_type", "record"),
+                        published_on=record.get("published_on"),
+                        metadata_=metadata,
+                        sha256=record_hash,
+                    )
+                    session.add(document)
+                    inserted += 1
+
+                elif document.sha256 != record_hash:
+                    document.title = record.get("title", record.get("document", ""))
+                    document.source_url = record.get("source_url")
+                    document.licence = record.get("licence")
+                    document.doc_type = record.get("doc_type", "record")
+                    document.published_on = record.get("published_on")
+                    document.metadata_ = metadata
+                    document.sha256 = record_hash
+                    updated += 1
+
+                else:
+                    unchanged += 1
+
+            await session.commit()
+
+        print(f"records={len(records)} inserted={inserted} updated={updated} unchanged={unchanged}")
+
+    finally:
+        await engine.dispose()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

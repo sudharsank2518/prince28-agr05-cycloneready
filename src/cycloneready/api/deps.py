@@ -3,18 +3,19 @@
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from cycloneready.config import Settings
-from cycloneready.store import RecordStore
 
 
 def get_app_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
-def get_store(request: Request) -> RecordStore:
-    return request.app.state.store
+async def get_db_session(request: Request):
+    async with request.app.state.sessionmaker() as session:
+        yield session
 
 
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
-StoreDep = Annotated[RecordStore, Depends(get_store)]
+DbSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
