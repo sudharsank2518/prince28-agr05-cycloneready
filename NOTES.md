@@ -124,3 +124,40 @@ Database migration, data loading, API integration and initial tests have been co
 ## Day 4 - Status
 
 Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit tests, integration tests, coverage, Makefile and README updates completed. Git push and pull request verification remain.
+
+
+## Day 4 - Stretch Task 1: Neon PostgreSQL
+
+- Docker image tested with Neon PostgreSQL.
+- Container started successfully on port 8001.
+- API readiness endpoint: Passed.
+- Database connection: True.
+- Neon PostgreSQL connectivity: Verified.
+
+
+## Day 4 - Stretch Task 2: Docker Layer Analysis
+
+- Docker image inspected using `docker history`.
+- Largest layer: Python virtual environment (.venv).
+- Layer size: 96.4 MB.
+- Python base image size: 87.7 MB.
+- System packages layer: 41.4 MB.
+
+
+## Day 4 - Stretch Task 3: HTML Coverage Report
+
+- Generated HTML coverage report successfully.
+- Added a test for retrieving a non-existent document.
+- Integration tests: 8 passed.
+- Coverage: 100%.
+- Missing document handling verified.
+
+
+## Day 4 - Stretch Task 4: Automatic API Restart
+
+- Added restart: true to the API database dependency.
+- Validated Docker Compose configuration.
+- Restarted PostgreSQL using docker compose restart db.
+- API restarted automatically.
+- Readiness endpoint verified successfully.
+- Database connection: True.

@@ -74,6 +74,17 @@ async def test_repository_filters(seeded, filters, expected):
     assert total == len(expected)
 
 
+async def test_repository_get_missing_document(seeded):
+    engine = make_engine(seeded)
+
+    async with make_sessionmaker(engine)() as session:
+        result = await DocumentRepository(session).get("missing-id")
+
+    await engine.dispose()
+
+    assert result is None
+
+
 def test_api_against_real_database(seeded):
     with TestClient(create_app(seeded)) as client:
         assert client.get("/ready").json()["checks"]["database"] is True
