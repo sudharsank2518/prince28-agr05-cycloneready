@@ -78,3 +78,16 @@ uv run ruff check .
 
 ## 10. Status
 Database migration, data loading, API integration and initial tests have been completed. Final verification and Git review remain.
+
+
+## Day 4 - Docker Build Evidence
+
+- Docker image: `cycloneready:dev`
+- First build time: 92.5 seconds
+- Second build time: 17 seconds
+- Image disk usage: 301 MB (target: below 400 MB)
+- Container user: `uid=999(app) gid=999(app)`
+- Non-root user verification: Passed
+- Docker build cache: Verified
+- Dependency installation layer: Cached on rebuild
+- Temporary source code change: Added and reverted successfully
