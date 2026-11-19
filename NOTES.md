@@ -78,3 +78,49 @@ uv run ruff check .
 
 ## 10. Status
 Database migration, data loading, API integration and initial tests have been completed. Final verification and Git review remain.
+
+
+## Day 4 - Docker Build Evidence
+
+- Docker image: `cycloneready:dev`
+- First build time: 92.5 seconds
+- Second build time: 17 seconds
+- Image disk usage: 301 MB (target: below 400 MB)
+- Container user: `uid=999(app) gid=999(app)`
+- Non-root user verification: Passed
+- Docker build cache: Verified
+- Dependency installation layer: Cached on rebuild
+- Temporary source code change: Added and reverted successfully
+
+
+## Day 4 - Docker Compose Evidence
+
+- Docker Compose services: API, PostgreSQL, Redis and migration.
+- PostgreSQL healthcheck: Passed.
+- Redis healthcheck: Passed.
+- API healthcheck: Passed.
+- Migration container: Exited successfully (exit code 0).
+- Initial database loading: 20 records inserted.
+- API documentation: `/docs` verified.
+- Document endpoint: `/v1/documents` verified.
+- Health endpoint: `/health` verified.
+- Readiness endpoint: `/ready` verified.
+- Database failure test: `/health` remained available and `/ready` returned `not_ready`.
+- Database recovery test: `/ready` returned `ready` after restarting PostgreSQL.
+- Idempotency test: 20 unchanged records after restarting the Compose stack.
+
+## Day 4 - Testing Evidence
+
+- Unit tests: 12 passed.
+- Integration tests: 7 passed.
+- Total tests: 19 passed.
+- Code coverage: 82%.
+- Ruff lint and formatting checks: Passed.
+- Clean Git clone Docker Compose test: Passed.
+- Original project Docker environment: Restored successfully.
+- Fresh database migration: Passed.
+- Sample records restored: 20 inserted.
+
+## Day 4 - Status
+
+Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit tests, integration tests, coverage, Makefile and README updates completed. Git push and pull request verification remain.

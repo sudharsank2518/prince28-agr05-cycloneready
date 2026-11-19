@@ -1,6 +1,9 @@
 """Database queries for reading CycloneReady documents."""
 
-from sqlalchemy import select
+from __future__ import annotations
+
+from sqlalchemy import cast, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cycloneready.db.models import Document
@@ -10,6 +13,54 @@ class DocumentRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def list(
+        self,
+        q: str | None = None,
+        filters: dict[str, str] | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[int, list[dict]]:
+        """List documents with JSONB metadata filters."""
+
+        statement = select(Document)
+        count_statement = select(Document.id)
+
+        if q:
+            statement = statement.where(Document.title.ilike(f"%{q}%"))
+            count_statement = count_statement.where(Document.title.ilike(f"%{q}%"))
+
+        if filters:
+            for key, value in filters.items():
+                if key == "tags":
+                    condition = cast(Document.metadata_, JSONB).contains({"tags": [value]})
+                elif key == "year":
+                    year_value = int(value) if value.isdigit() else value
+                    condition = cast(Document.metadata_, JSONB).contains({"year": year_value})
+                else:
+                    condition = cast(Document.metadata_, JSONB).contains({key: value})
+
+                statement = statement.where(condition)
+                count_statement = count_statement.where(condition)
+
+        total_result = await self.session.execute(count_statement)
+        total = len(total_result.scalars().all())
+
+        statement = statement.order_by(Document.id).limit(limit).offset(offset)
+
+        result = await self.session.execute(statement)
+        documents = result.scalars().all()
+
+        items = [
+            {
+                "id": document.external_id,
+                "title": document.title,
+                **document.metadata_,
+            }
+            for document in documents
+        ]
+
+        return total, items
+
     async def search(
         self,
         query: str | None = None,
@@ -17,6 +68,8 @@ class DocumentRepository:
         offset: int = 0,
         sort: str | None = None,
     ) -> tuple[list[dict], int]:
+        """Search documents by title with optional sorting."""
+
         statement = select(Document)
 
         if query:
@@ -30,7 +83,6 @@ class DocumentRepository:
         total_result = await self.session.execute(count_statement)
         total = len(total_result.scalars().all())
 
-        # Sorting options
         sort_columns = {
             "title": Document.title,
             "published_on": Document.published_on,
@@ -44,10 +96,8 @@ class DocumentRepository:
                 raise ValueError("Invalid sort field")
 
             column = sort_columns[field]
-
             statement = statement.order_by(column.desc() if descending else column.asc())
         else:
-            # Preserve the original default ordering
             statement = statement.order_by(Document.id)
 
         statement = statement.limit(limit).offset(offset)
@@ -73,6 +123,8 @@ class DocumentRepository:
         return items, total
 
     async def get(self, external_id: str) -> dict | None:
+        """Get a document by its external ID."""
+
         statement = select(Document).where(Document.external_id == external_id)
 
         result = await self.session.execute(statement)
