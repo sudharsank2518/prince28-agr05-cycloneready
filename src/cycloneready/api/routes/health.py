@@ -29,7 +29,7 @@ async def ready(
     try:
         await session.execute(text("SELECT 1"))
         checks["database"] = True
-    except SQLAlchemyError:
+    except (SQLAlchemyError, OSError):
         pass
 
     ok = all(checks.values())
