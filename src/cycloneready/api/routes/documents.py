@@ -12,6 +12,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 async def list_documents(
     session: DbSessionDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
+    document: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     sort: Annotated[str | None, Query()] = None,
@@ -19,7 +20,13 @@ async def list_documents(
     repository = DocumentRepository(session)
 
     try:
-        rows, total = await repository.search(q, limit, offset, sort)
+        rows, total = await repository.search(
+            query=q,
+            limit=limit,
+            offset=offset,
+            sort=sort,
+            document=document,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=400,

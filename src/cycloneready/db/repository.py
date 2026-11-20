@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import cast, select
+from sqlalchemy import cast, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,22 +20,28 @@ class DocumentRepository:
         limit: int = 20,
         offset: int = 0,
     ) -> tuple[int, list[dict]]:
-        """List documents with JSONB metadata filters."""
+        """List documents with typed-column and JSONB metadata filters."""
 
         statement = select(Document)
-        count_statement = select(Document.id)
+        count_statement = select(func.count(Document.id))
 
         if q:
-            statement = statement.where(Document.title.ilike(f"%{q}%"))
-            count_statement = count_statement.where(Document.title.ilike(f"%{q}%"))
+            condition = Document.title.ilike(f"%{q}%")
+            statement = statement.where(condition)
+            count_statement = count_statement.where(condition)
 
         if filters:
             for key, value in filters.items():
-                if key == "tags":
+                if key == "document":
+                    condition = Document.document == value
+
+                elif key == "tags":
                     condition = cast(Document.metadata_, JSONB).contains({"tags": [value]})
+
                 elif key == "year":
                     year_value = int(value) if value.isdigit() else value
                     condition = cast(Document.metadata_, JSONB).contains({"year": year_value})
+
                 else:
                     condition = cast(Document.metadata_, JSONB).contains({key: value})
 
@@ -43,7 +49,7 @@ class DocumentRepository:
                 count_statement = count_statement.where(condition)
 
         total_result = await self.session.execute(count_statement)
-        total = len(total_result.scalars().all())
+        total = total_result.scalar_one()
 
         statement = statement.order_by(Document.id).limit(limit).offset(offset)
 
@@ -55,6 +61,7 @@ class DocumentRepository:
                 "id": document.external_id,
                 "title": document.title,
                 **document.metadata_,
+                "document": document.document,
             }
             for document in documents
         ]
@@ -67,21 +74,26 @@ class DocumentRepository:
         limit: int = 20,
         offset: int = 0,
         sort: str | None = None,
+        document: str | None = None,
     ) -> tuple[list[dict], int]:
-        """Search documents by title with optional sorting."""
+        """Search documents by title with optional document filtering."""
 
         statement = select(Document)
+        count_statement = select(func.count(Document.id))
 
         if query:
-            statement = statement.where(Document.title.ilike(f"%{query}%"))
+            condition = Document.title.ilike(f"%{query}%")
+            statement = statement.where(condition)
+            count_statement = count_statement.where(condition)
 
-        count_statement = select(Document.id)
-
-        if query:
-            count_statement = count_statement.where(Document.title.ilike(f"%{query}%"))
+        # Filter using the indexed typed document column.
+        if document:
+            condition = Document.document == document
+            statement = statement.where(condition)
+            count_statement = count_statement.where(condition)
 
         total_result = await self.session.execute(count_statement)
-        total = len(total_result.scalars().all())
+        total = total_result.scalar_one()
 
         sort_columns = {
             "title": Document.title,
@@ -116,6 +128,7 @@ class DocumentRepository:
                     document.published_on.isoformat() if document.published_on else None
                 ),
                 **document.metadata_,
+                "document": document.document,
             }
             for document in documents
         ]
@@ -141,4 +154,5 @@ class DocumentRepository:
             "doc_type": document.doc_type,
             "published_on": (document.published_on.isoformat() if document.published_on else None),
             **document.metadata_,
+            "document": document.document,
         }
