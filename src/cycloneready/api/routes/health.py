@@ -18,6 +18,12 @@ def health(settings: SettingsDep) -> dict[str, str]:
     }
 
 
+@router.head("/health")
+def health_head() -> Response:
+    """Allow uptime monitors to check liveness using HEAD."""
+    return Response(status_code=200)
+
+
 @router.get("/ready")
 async def ready(
     session: DbSessionDep,
