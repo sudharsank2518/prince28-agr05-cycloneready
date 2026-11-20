@@ -19,6 +19,13 @@ def test_health_is_ok(client):
     assert r.json()["version"] == "dev"
 
 
+def test_health_supports_head_request(client):
+    r = client.head("/health")
+
+    assert r.status_code == 200
+    assert r.content == b""
+
+
 def test_health_reports_custom_git_sha(tmp_path):
     test_sha = "abc123def456"  # pragma: allowlist secret
 
