@@ -154,9 +154,9 @@ Database migration, data loading, API integration, initial tests, query performa
 ## Day 4 – Testing Evidence
 
 - Unit tests: 12 passed.
-- Integration tests: 7 passed.
-- Total tests: 19 passed.
-- Code coverage: 82%.
+- Integration tests: 8 passed.
+- Total tests: 20 passed.
+- Code coverage: 100% (HTML coverage report).
 - Ruff lint and formatting checks: Passed.
 - Clean Git clone Docker Compose test: Passed.
 - Original project Docker environment: Restored successfully.
@@ -200,12 +200,185 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - Readiness endpoint verified successfully.
 - Database connection: True.
 
+## Day 4 – Monitoring
 
-### Monitoring
-- UptimeRobot monitor: CycloneReady API
+- UptimeRobot monitor: CycloneReady API.
 - Endpoint: https://cycloneready.onrender.com/health
-- Check interval: Every 5 minutes
-- Status: Up
+- Check interval: Every 5 minutes.
+- Status: Up.
 - Uptime badge: Configured in README.md using a monitor-specific API key.
 - API key: Not stored in Git or project files.
 - Alerts: Email notifications enabled.
+
+---
+
+# Day 5 – CI/CD and Going Live
+
+## 1. GitHub Actions – Continuous Integration
+
+- Created `.github/workflows/ci.yml`.
+- CI runs automatically on pull requests and pushes to `main`.
+- Configured PostgreSQL service for integration testing.
+- Linting and tests executed using `poe lint` and `poe cov`.
+- Docker image built and pushed to GitHub Container Registry (GHCR).
+- Image tagged using the commit SHA and `main`.
+- Pre-commit checks executed in CI.
+- CI checks passed successfully.
+
+## 2. GitHub Actions – Continuous Deployment
+
+- Created `.github/workflows/cd.yml`.
+- Automatic deployment triggered after successful CI on `main`.
+- Docker image deployed to Render.
+- Added production smoke test to verify the live API.
+- Added retry mechanism to handle deployment startup delays.
+- Added manual workflow dispatch to support rollback and roll-forward.
+- Successful automatic deployments verified through GitHub Actions.
+
+## 3. Production Deployment – Render
+
+- Hosting platform: Render.
+- Service name: `cycloneready`.
+- Live URL: https://cycloneready.onrender.com
+- API documentation: https://cycloneready.onrender.com/docs
+- Health endpoint: https://cycloneready.onrender.com/health
+- Database: Neon PostgreSQL.
+- Production environment variables configured in Render.
+- Health endpoint verified successfully.
+
+## 4. GitHub Repository Security
+
+- Configured branch protection for `main`.
+- Pull requests required before merging.
+- Required CI checks:
+  - `lint and test (GitHub Actions)`
+  - `build image (GitHub Actions)`
+- Force pushes blocked.
+- Branch deletion restricted.
+- GitHub Secrets configured:
+  - `DATABASE_URL`
+  - `RENDER_DEPLOY_HOOK`
+- Repository variable configured:
+  - `LIVE_URL`
+- No database credentials or deploy hooks committed to Git.
+
+## 5. UptimeRobot Monitoring
+
+- Monitor name: CycloneReady API.
+- Monitoring URL: https://cycloneready.onrender.com/health
+- Check interval: Every 5 minutes.
+- Status: Up.
+- Email alerts enabled.
+- Fixed HEAD request support for the health endpoint.
+- Verified HTTP HEAD request returns 200 OK.
+- Uptime badge configured in README.md.
+- Monitor-specific API key is not stored in Git or project files.
+
+## 6. Nightly Production Health Check
+
+- Created `.github/workflows/nightly-health.yml`.
+- Scheduled execution: Every day at 12:00 AM IST.
+- Added manual execution using `workflow_dispatch`.
+- Validates production health endpoint.
+- Checks that status is `ok`.
+- Checks that environment is `production`.
+
+**Manual test evidence:**
+
+- Workflow: Nightly Health Check #1.
+- Status: Success.
+- Duration: 7 seconds.
+- Commit: `661c669abdff6c901f566cade6934b6ffa1217d6`
+
+Health-check output:
+
+```text
+Checking CycloneReady production health...
+Health response: {"status":"ok","app":"cycloneready","env":"production","version":"661c669abdff6c901a48649d669b5ea445ab4d3"} # pragma: allowlist secret
+CycloneReady is healthy!
+```
+
+## 7. Rollback and Roll-forward Drill
+
+**Rollback:**
+
+- Previous version SHA: `7ccdcdb396397081e8f7f70dafff19f769eb1eda`
+- Commit: Merge pull request #6.
+- Workflow: CD #7.
+- Run ID: `44799668244`.
+- Deployment status: Success.
+- Duration: 50 seconds.
+- Live health endpoint verified the older version was running.
+
+**Roll-forward:**
+
+- Latest version SHA: `661c669abdff6c901f566cade6934b6ffa1217d6`
+- Workflow: CD #8.
+- Run ID: `44800188227`.
+- Deployment status: Success.
+- Duration: 51 seconds.
+- Live health endpoint verified the latest version was restored.
+
+**Database migration safety:**
+
+- Database migrations were skipped during rollback.
+- The existing database schema was retained.
+- The rollback did not downgrade or delete database schema changes.
+- The newer schema changes were additive, so the older application version could continue operating without using the additional column and index.
+
+## 8. Production Deployment Lead Time
+
+Measured lead time from PR merge until the successful production smoke test.
+
+All timestamps below are in Indian Standard Time (IST).
+
+| Deployment | PR | CD run | Merge time (IST) | Smoke-test success time (IST) | Lead time |
+|---|---|---|---|---|---|
+| 1 | #10 | CD #4 | 20 Nov, 11:17:59 PM | 20 Nov, 11:20:25 PM | 2m 26s |
+| 2 | #11 | CD #5 | 20 Nov, 11:59:10 PM | 21 Nov, 12:01:29 AM | 2m 19s |
+| 3 | #12 | CD #6 | 21 Nov, 12:16:41 AM | 21 Nov, 12:18:55 AM | 2m 14s |
+
+**Deployment measurements:**
+
+- CD #4 execution duration: 58 seconds.
+- CD #5 execution duration: 52 seconds.
+- CD #6 execution duration: 58 seconds.
+- Average deployment lead time: 2 minutes 20 seconds.
+- Slowest CD step: `Smoke test live application`.
+- Longest observed smoke-test duration: 35 seconds (CD #6).
+
+## 9. Stretch Tasks
+
+- Dependabot weekly GitHub Actions dependency updates configured.
+- Pre-commit checks added to CI.
+- Nightly production health check configured.
+- Rollback and roll-forward tested successfully.
+- Production environment approval gate not enabled because this is a solo automatic deployment workflow; enabling a required reviewer would interrupt unattended deployments.
+
+## 10. Useful Production URLs
+
+- Live application: https://cycloneready.onrender.com
+- API documentation: https://cycloneready.onrender.com/docs
+- Health check: https://cycloneready.onrender.com/health
+- GitHub repository: https://github.com/sudharsank2518/prince28-agr05-cycloneready
+
+## 11. Day 5 Status
+
+- [x] CI workflow configured and verified.
+- [x] Main branch protection configured.
+- [x] Render production deployment completed.
+- [x] Automatic CD verified.
+- [x] UptimeRobot monitoring configured and verified.
+- [x] CI, Live and Uptime badges added to README.
+- [x] Nightly health-check workflow tested successfully.
+- [x] Rollback drill completed successfully.
+- [x] Roll-forward completed successfully.
+- [x] Dependabot weekly updates configured.
+- [x] Pre-commit checks integrated into CI.
+- [x] Measured lead time across three successful CD runs.
+- [x] Identified the slowest CD step.
+- [ ] Commit and merge final documentation updates.
+- [ ] Create and push the `week-1` Git tag.
+- [ ] Share the live URL with the trainer.
+
+**Live Project:** https://cycloneready.onrender.com
