@@ -2,7 +2,17 @@
 
 Helps neighbourhood groups prepare for cyclones and floods using NDMA and Tamil Nadu disaster plans, always pointing to current official alerts.
 
-**Status:** Day 4 completed — FastAPI backend, PostgreSQL, Redis, Docker Compose, and unit/integration tests. Live URL from Day 5.
+[![CI](https://github.com/sudharsank2518/prince28-agr05-cycloneready/actions/workflows/ci.yml/badge.svg)](https://github.com/sudharsank2518/prince28-agr05-cycloneready/actions/workflows/ci.yml)
+
+[![Live](https://img.shields.io/website?url=https%3A%2F%2Fcycloneready.onrender.com%2Fhealth&label=live)](https://cycloneready.onrender.com/docs)
+
+[![Uptime (30 days)](https://img.shields.io/uptimerobot/ratio/m804750005-57078b247c2823d5b862d70c)](https://cycloneready.onrender.com/health)
+
+**Status:** Day 5 — CI/CD deployment and uptime monitoring configured.
+
+**Live application:** https://cycloneready.onrender.com
+
+[API Documentation](https://cycloneready.onrender.com/docs) · [Health Check](https://cycloneready.onrender.com/health)
 
 ## Who it's for
 
@@ -16,9 +26,9 @@ Guidance is spread across NDMA guidelines, the state plan and IMD warning format
 
 NDMA guidelines (cyclones, urban flooding, heat waves), Tamil Nadu State Disaster Management Plan, IMD cyclone warning SOPs and bulletin formats.
 
-- https://ndma.gov.in/
-- https://tnsdma.tn.gov.in/
-- https://rsmcnewdelhi.imd.gov.in/
+- [NDMA](https://ndma.gov.in/)
+- [Tamil Nadu SDMA](https://tnsdma.tn.gov.in/)
+- [RSMC New Delhi – IMD](https://rsmcnewdelhi.imd.gov.in/)
 - Terms: Public guidelines. Check individual source permissions before reuse.
 
 ## Hardest problem (my interview story)
@@ -55,7 +65,7 @@ uv run poe dev
 
 Open the API documentation:
 
-http://localhost:8000/docs
+[http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Run with Docker Compose
 
@@ -142,7 +152,7 @@ uv run poe test-integration
 
 Run all tests with coverage:
 
-```bash
+```powershell
 $env:TEST_DATABASE_URL="postgresql://app:app@localhost:5433/app_test" # pragma: allowlist secret
 uv run poe cov
 ```
@@ -159,3 +169,24 @@ Remove-Item Env:TEST_DATABASE_URL
 uv run poe lint
 uv run poe cov
 ```
+
+## CI/CD and deployment
+
+CycloneReady uses GitHub Actions for continuous integration and deployment.
+
+- CI runs on pull requests and pushes to the main branch.
+- Automated checks include linting, tests, and Docker image builds.
+- Successful changes merged into `main` trigger deployment to Render.
+- A live smoke test verifies the deployed application.
+- GitHub repository secrets store deployment credentials and database connection details.
+
+### Live deployment
+
+- **Hosting:** Render
+- **Database:** Neon PostgreSQL
+- **Container registry:** GitHub Container Registry (GHCR)
+- **Deployment URL:** https://cycloneready.onrender.com
+
+### Monitoring
+
+UptimeRobot monitors the `/health` endpoint every 5 minutes to check application availability.

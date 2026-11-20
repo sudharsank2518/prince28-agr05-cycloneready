@@ -199,3 +199,13 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - API restarted automatically.
 - Readiness endpoint verified successfully.
 - Database connection: True.
+
+
+### Monitoring
+- UptimeRobot monitor: CycloneReady API
+- Endpoint: https://cycloneready.onrender.com/health
+- Check interval: Every 5 minutes
+- Status: Up
+- Uptime badge: Configured in README.md using a monitor-specific API key.
+- API key: Not stored in Git or project files.
+- Alerts: Email notifications enabled.
