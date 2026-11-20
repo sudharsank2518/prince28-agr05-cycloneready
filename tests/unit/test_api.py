@@ -12,8 +12,29 @@ from cycloneready.config import Settings
 
 def test_health_is_ok(client):
     r = client.get("/health")
+
     assert r.status_code == 200
     assert r.json()["status"] == "ok"
+    assert r.json()["app"] == "cycloneready"
+    assert r.json()["version"] == "dev"
+
+
+def test_health_reports_custom_git_sha(tmp_path):
+    test_sha = "abc123def456"  # pragma: allowlist secret
+
+    settings = Settings(
+        app_env="ci",
+        database_url=f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}",
+        git_sha=test_sha,
+    )
+
+    app = create_app(settings)
+
+    with TestClient(app) as c:
+        r = c.get("/health")
+
+    assert r.status_code == 200
+    assert r.json()["version"] == test_sha
 
 
 def test_ready_when_database_available(client):

@@ -1,3 +1,4 @@
+
 # syntax=docker/dockerfile:1
 
 FROM python:3.12-slim AS builder
@@ -38,6 +39,10 @@ COPY --chown=app:app data ./data
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
+
+# Commit SHA supplied by GitHub Actions during image build.
+ARG GIT_SHA=dev
+ENV GIT_SHA=${GIT_SHA}
 
 USER app
 
