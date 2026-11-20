@@ -1,0 +1,32 @@
+name: Nightly Health Check
+
+on:
+  schedule:
+  - cron: "30 18 * * *" # Every day at 12:00 AM IST
+  workflow_dispatch:
+
+
+jobs:
+  health-check:
+    name: Check live API health
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check the live health endpoint
+      run: |
+        echo "Checking CycloneReady production health..."
+
+        response=$(curl --silent --show-error --fail \
+          --retry 3 \
+          --retry-delay 10 \
+          "${{ vars.LIVE_URL }}/health")
+
+        echo "Health response: $response"
+
+        echo "$response" | python -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        assert data.get('status') == 'ok', 'Health check failed'
+        assert data.get('env') == 'production', 'Not production environment'
+        print('CycloneReady is healthy!')
+        "
