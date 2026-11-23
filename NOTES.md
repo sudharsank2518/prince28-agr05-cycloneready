@@ -402,11 +402,13 @@ All timestamps below are in Indian Standard Time (IST).
 
 ### 2. Testing and Verification
 
-- [x] Downloader unit tests: 27 passed.
-- [x] Full test suite: 41 passed.
+- [x] Downloader unit tests: 28 passed.
+- [x] Full test suite: 42 passed.
 - [x] Ruff lint: passed.
 - [x] Ruff formatting: passed.
 - [x] Mocked downloader restart/resume test: passed.
+- [x] Interrupted-download cleanup test: passed.
+- [x] Cancellation cleanup test: passed.
 - [x] Dataset report generated successfully.
 - [x] Capacity report generated successfully.
 - [x] Docker Compose configuration validated.
