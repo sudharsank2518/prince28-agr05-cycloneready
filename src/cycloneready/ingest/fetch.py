@@ -227,7 +227,6 @@ class Fetcher:
         except ValueError:
             try:
                 retry_date = parsedate_to_datetime(value)
-
                 seconds = (retry_date - datetime.now(UTC)).total_seconds()
 
                 return min(120.0, max(0.0, seconds))
@@ -268,8 +267,6 @@ class Fetcher:
 
         previous = self.latest.get(url, {})
 
-        # Normal mode: skip completed downloads.
-        # Refresh mode: check whether the server has changed the file.
         if not self.refresh and self._already_downloaded(url):
             return {
                 "url": url,
@@ -299,7 +296,6 @@ class Fetcher:
 
         headers = {}
 
-        # ETag stretch feature.
         if self.refresh and previous.get("etag") and self._already_downloaded(url):
             headers["If-None-Match"] = previous["etag"]
 
@@ -313,7 +309,6 @@ class Fetcher:
                         url,
                         headers=headers,
                     ) as response:
-                        # Server says the local copy is still current.
                         if response.status_code == 304:
                             if not self._already_downloaded(url):
                                 raise RuntimeError(
@@ -368,20 +363,22 @@ class Fetcher:
                                     digest.update(chunk)
                                     file.write(chunk)
 
-                            # Replace only after a complete download.
                             temp_path.replace(final_path)
 
+                        except asyncio.CancelledError:
+                            # Clean up incomplete downloads when cancelled.
+                            temp_path.unlink(missing_ok=True)
+                            raise
+
                         except Exception:
+                            # Clean up incomplete downloads on other errors.
                             temp_path.unlink(missing_ok=True)
                             raise
 
                         result = {
                             **source,
                             "status": "downloaded",
-                            "file_path": str(final_path).replace(
-                                "\\",
-                                "/",
-                            ),
+                            "file_path": str(final_path).replace("\\", "/"),
                             "sha256": digest.hexdigest(),
                             "bytes": total_bytes,
                             "content_type": response.headers.get("Content-Type"),
@@ -425,6 +422,11 @@ class Fetcher:
                 )
 
                 await asyncio.sleep(wait)
+
+            except asyncio.CancelledError:
+                # Ensure cancellation propagates without recording a failure.
+                temp_path.unlink(missing_ok=True)
+                raise
 
             except Exception as error:
                 temp_path.unlink(missing_ok=True)
@@ -644,7 +646,12 @@ def append_urls_to_sources_csv(
 
     if any(
         word in licence.lower()
-        for word in ("unclear", "unknown", "permission required", "not permitted")
+        for word in (
+            "unclear",
+            "unknown",
+            "permission required",
+            "not permitted",
+        )
     ):
         raise ValueError("A verified licence or permission is required.")
 
