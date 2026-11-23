@@ -43,7 +43,7 @@ Preparedness planner: enter household details and get a checklist by warning sta
 
 Correct stage-to-action mapping for 95%+ of 30 questions; 100% of live-event questions point to official alerts.
 
-## Run it locally
+## Run locally in one command
 
 Install dependencies:
 
