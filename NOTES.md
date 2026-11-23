@@ -1,6 +1,6 @@
 # CycloneReady – Project Notes
 
-## Day 3 – Database and API Integration
+## D03 – Database and API Integration
 
 ### 1. Database Setup
 
@@ -212,7 +212,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 
 ---
 
-# Day 5 – CI/CD and Going Live
+## D05 – CI/CD and Going Live
 
 ## 1. GitHub Actions – Continuous Integration
 
