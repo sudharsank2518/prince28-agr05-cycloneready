@@ -383,44 +383,85 @@ All timestamps below are in Indian Standard Time (IST).
 
 **Live Project:** https://cycloneready.onrender.com
 
+---
 
-## 12. Day 6 — Corpus Collection and Stretch Tasks
+## 12. Day 6 – Corpus Collection and Stretch Tasks
 
-### Implementation
-- [x] Implemented the resumable document downloader.
+### 1. Implementation
+
+- [x] Implemented the resumable document downloader using HTTPX.
+- [x] Added robots.txt checking and polite crawling controls.
+- [x] Added retry handling, concurrency limits and download size limits.
+- [x] Added append-only manifest tracking and SHA-256 checksums.
 - [x] Added source review and licence tracking.
 - [x] Added dataset and capacity report generation.
-- [x] Added SHA-256 duplicate finder.
+- [x] Added SHA-256 duplicate detection.
 - [x] Added manifest-based S3-compatible storage uploader.
 - [x] Configured local Silo object storage using Docker Compose.
-- [x] Verified sample file upload to local storage.
+- [x] Verified a sample file upload to local Silo storage.
 
-### Testing and verification
-- [x] Downloader unit tests: 26 passed.
-- [x] Full unit test suite: 40 passed.
+### 2. Testing and Verification
+
+- [x] Downloader unit tests: 27 passed.
+- [x] Full test suite: 41 passed.
 - [x] Ruff lint: passed.
 - [x] Ruff formatting: passed.
+- [x] Mocked downloader restart/resume test: passed.
 - [x] Dataset report generated successfully.
 - [x] Capacity report generated successfully.
+- [x] Docker Compose configuration validated.
+- [x] Local API health endpoint verified.
+- [x] PostgreSQL and Redis health verified.
 - [x] Production deployment verified with the latest main commit.
 
-### Corpus status
+### 3. Corpus Status
+
 - Documents collected: 0.
 - PDF pages collected: 0.
 - Extracted tokens: 0.
 - Duplicate SHA-256 groups: 0.
-- No files uploaded from the actual corpus.
+- Actual corpus files uploaded to Silo: 0.
+- Sample storage upload verified separately.
 
-### Source and permission gaps
-- NDMA robots access returned 403; automated access rules need clarification.
-- TNSDMA SSL certificate issue remains unresolved.
-- IMD/RSMC reproduction permission requires confirmation.
+### 4. Source Review and Permission Requests
+
+Permission requests were sent on 23 November 2026.
+
+| Organisation | Status |
+|---|---|
+| NDMA | Awaiting response |
+| TNSDMA | Awaiting response |
+| IMD / RSMC | Awaiting response |
+
+- NDMA robots.txt returned HTTP 403; automated access rules remain unverified.
+- TNSDMA SSL certificate verification issue remains unresolved.
+- IMD/RSMC robots.txt returned HTTP 404; reproduction permission is still pending.
 - No source has yet been approved for automated downloading or reproduction.
+- Source decisions are documented in `docs/SOURCE_REVIEW.md`.
 
-### Remaining work
+### 5. Capacity Report
+
+- Current corpus size: 0 documents and 0 pages.
+- Tokens per page: Not yet measurable.
+- Embedding cost: Not calculated because no representative corpus has been collected.
+- PostgreSQL capacity: Not yet verified against a measured corpus.
+- A representative approved document sample is required before reliable capacity estimates can be made.
+- The expected effect of a 10x corpus increase is documented in `docs/CAPACITY.md`.
+
+### 6. Remaining Work
+
 - [ ] Obtain source permissions and verify access rules.
-- [ ] Collect the approved start corpus.
-- [ ] Test interrupted download and resume behaviour.
-- [ ] Verify actual corpus uploads to local Silo.
-- [ ] Measure a representative sample and update capacity estimates.
-- [ ] Record final Day 6 metrics and observations.
+- [ ] Collect the approved initial document corpus.
+- [ ] Perform a real interrupted-download and restart test.
+- [ ] Upload actual corpus documents to local Silo.
+- [ ] Measure a representative document sample.
+- [ ] Update capacity estimates using measured data.
+- [ ] Record final corpus metrics and observations.
+
+### 7. Day 6 Status
+
+Downloader implementation, source-review documentation, reporting, duplicate detection, local object storage setup and automated tests are completed.
+
+Corpus collection and final capacity measurements remain pending because source permissions have not yet been confirmed.
+
+**Day 6 is partially completed; final collection and validation are pending.**
