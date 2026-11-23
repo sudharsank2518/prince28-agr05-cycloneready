@@ -22,9 +22,9 @@
 
 ## Document inventory
 
-| Title | Source | URL | Licence | File | Pages | Size (MB) | SHA-256 |
-|---|---|---|---|---|---:|---:|---|
-| No collected documents yet | — | — | — | — | 0 | 0.00 | — |
+| Title | Source | URL | Licence | File | Pages | Size (MB) | Fetch time (seconds) | SHA-256 |
+|---|---|---|---|---|---:|---:|---:|---|
+| No collected documents yet | - | - | - | - | 0 | 0.00 | - | - |
 
 ## Source review
 
@@ -36,7 +36,14 @@
 
 - Files requiring more than one attempt: 0
 - Duplicate SHA-256 groups: 0
-- Slowest host: Not available (download duration is not recorded).
+- Records with fetch duration: 0
+- Slowest host by cumulative fetch time: Not available (no fetch durations recorded yet)
+
+## Host fetch durations
+
+| Host | Total recorded fetch time (seconds) |
+|---|---:|
+| No duration data available | - |
 
 ## Duplicate files
 

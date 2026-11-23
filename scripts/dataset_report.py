@@ -6,6 +6,7 @@ import math
 from collections import defaultdict
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 from pypdf import PdfReader
 
@@ -67,6 +68,7 @@ def read_manifest():
 
                 if url:
                     latest[url] = record
+
             except json.JSONDecodeError:
                 continue
 
@@ -124,7 +126,8 @@ def inspect_text_file(path):
 
 
 def collect_stats(records):
-    """Calculate corpus statistics from downloaded manifest entries."""
+    """Calculate corpus and crawl statistics from manifest entries."""
+
     sources = defaultdict(
         lambda: {
             "files": 0,
@@ -134,6 +137,8 @@ def collect_stats(records):
         }
     )
 
+    host_durations = defaultdict(float)
+
     documents = []
     total_files = 0
     total_bytes = 0
@@ -142,9 +147,28 @@ def collect_stats(records):
     total_scanned_pages = 0
     extraction_errors = 0
     retry_count = 0
+    duration_records = 0
+
     hashes = defaultdict(list)
 
     for record in records:
+        # Duration includes robots checks, waiting and fetch attempts.
+        duration = record.get("duration_seconds")
+
+        if duration is not None:
+            try:
+                duration = float(duration)
+
+                if math.isfinite(duration) and duration >= 0:
+                    host = urlparse(record.get("url", "")).netloc
+
+                    if host:
+                        host_durations[host] += duration
+                        duration_records += 1
+
+            except (TypeError, ValueError):
+                pass
+
         if record.get("status") not in {"downloaded", "not_modified"}:
             continue
 
@@ -177,7 +201,13 @@ def collect_stats(records):
             if extraction_error:
                 extraction_errors += 1
 
-        elif path.suffix.lower() in {".html", ".htm", ".txt", ".md", ".csv"}:
+        elif path.suffix.lower() in {
+            ".html",
+            ".htm",
+            ".txt",
+            ".md",
+            ".csv",
+        }:
             tokens = inspect_text_file(path)
 
         source = record.get("source", "Unknown")
@@ -210,16 +240,26 @@ def collect_stats(records):
                 "source": source,
                 "url": record.get("url", ""),
                 "licence": licence,
-                "file": str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path),
+                "file": (str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)),
                 "pages": pages,
                 "bytes": size,
                 "sha256": digest,
                 "scanned_pages": scanned_pages,
                 "error": extraction_error,
+                "duration_seconds": duration,
             }
         )
 
     duplicates = {digest: paths for digest, paths in hashes.items() if len(paths) > 1}
+
+    slowest_host = None
+    slowest_seconds = None
+
+    if host_durations:
+        slowest_host, slowest_seconds = max(
+            host_durations.items(),
+            key=lambda item: item[1],
+        )
 
     return {
         "sources": dict(sources),
@@ -232,6 +272,10 @@ def collect_stats(records):
         "extraction_errors": extraction_errors,
         "retry_count": retry_count,
         "duplicates": duplicates,
+        "host_durations": dict(host_durations),
+        "slowest_host": slowest_host,
+        "slowest_seconds": slowest_seconds,
+        "duration_records": duration_records,
     }
 
 
@@ -246,6 +290,7 @@ def markdown_cell(value):
 
 def generate_dataset_report(records, stats):
     """Generate DATASET.md."""
+
     lines = [
         "# CycloneReady Dataset",
         "",
@@ -290,12 +335,21 @@ def generate_dataset_report(records, stats):
             "",
             "## Document inventory",
             "",
-            "| Title | Source | URL | Licence | File | Pages | Size (MB) | SHA-256 |",
-            "|---|---|---|---|---|---:|---:|---|",
+            (
+                "| Title | Source | URL | Licence | File | Pages | "
+                "Size (MB) | Fetch time (seconds) | SHA-256 |"
+            ),
+            "|---|---|---|---|---|---:|---:|---:|---|",
         ]
     )
 
     for doc in stats["documents"]:
+        duration_text = (
+            f"{doc['duration_seconds']:.3f}"
+            if doc["duration_seconds"] is not None
+            else "Not recorded"
+        )
+
         lines.append(
             f"| {markdown_cell(doc['title'])} "
             f"| {markdown_cell(doc['source'])} "
@@ -304,11 +358,17 @@ def generate_dataset_report(records, stats):
             f"| {markdown_cell(doc['file'])} "
             f"| {doc['pages']} "
             f"| {format_mb(doc['bytes']):.2f} "
+            f"| {duration_text} "
             f"| `{doc['sha256']}` |"
         )
 
     if not stats["documents"]:
-        lines.append("| No collected documents yet | — | — | — | — | 0 | 0.00 | — |")
+        lines.append("| No collected documents yet | - | - | - | - | 0 | 0.00 | - | - |")
+
+    if stats["slowest_host"] is not None:
+        slowest_text = f"{stats['slowest_host']} ({stats['slowest_seconds']:.3f} seconds total)"
+    else:
+        slowest_text = "Not available (no fetch durations recorded yet)"
 
     lines.extend(
         [
@@ -323,7 +383,28 @@ def generate_dataset_report(records, stats):
             "",
             f"- Files requiring more than one attempt: {stats['retry_count']}",
             f"- Duplicate SHA-256 groups: {len(stats['duplicates'])}",
-            "- Slowest host: Not available (download duration is not recorded).",
+            f"- Records with fetch duration: {stats['duration_records']}",
+            f"- Slowest host by cumulative fetch time: {slowest_text}",
+            "",
+            "## Host fetch durations",
+            "",
+            "| Host | Total recorded fetch time (seconds) |",
+            "|---|---:|",
+        ]
+    )
+
+    if stats["host_durations"]:
+        for host, duration in sorted(
+            stats["host_durations"].items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            lines.append(f"| {markdown_cell(host)} | {duration:.3f} |")
+    else:
+        lines.append("| No duration data available | - |")
+
+    lines.extend(
+        [
             "",
             "## Duplicate files",
             "",
@@ -356,6 +437,7 @@ def generate_dataset_report(records, stats):
 
 def generate_capacity_report(stats, full_pages):
     """Generate docs/CAPACITY.md from measured corpus statistics."""
+
     pages = stats["pages"]
     tokens = stats["tokens"]
 
@@ -431,7 +513,13 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate CycloneReady dataset and capacity reports"
     )
-    parser.add_argument("--full-pages", type=int, default=TARGET_PAGES)
+
+    parser.add_argument(
+        "--full-pages",
+        type=int,
+        default=TARGET_PAGES,
+    )
+
     args = parser.parse_args()
 
     if args.full_pages < 1:
@@ -449,6 +537,15 @@ def main():
     print("Pages:", stats["pages"])
     print("Tokens:", stats["tokens"])
     print("Duplicate SHA-256 groups:", len(stats["duplicates"]))
+
+    if stats["slowest_host"]:
+        print(
+            "Slowest host:",
+            stats["slowest_host"],
+            f"({stats['slowest_seconds']:.3f} seconds)",
+        )
+    else:
+        print("Slowest host: Not available (no duration data yet)")
 
 
 if __name__ == "__main__":
