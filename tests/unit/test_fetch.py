@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from cycloneready.ingest.fetch import (
+    Fetcher,
     discover_sitemap_urls,
     fetch_sources,
     load_sources,
@@ -133,12 +134,7 @@ def test_load_sources_unverified_licence(tmp_path):
 
 # 6. robots.txt 404 allows downloading
 def test_robots_404_allows_download(tmp_path):
-    results = run_fetch(
-        make_source(),
-        tmp_path,
-        robots_404_or_file,
-    )
-
+    results = run_fetch(make_source(), tmp_path, robots_404_or_file)
     assert results[0]["result"] == "downloaded"
 
 
@@ -146,14 +142,10 @@ def test_robots_404_allows_download(tmp_path):
 def test_robots_disallow_blocks_download(tmp_path):
     def handler(request):
         if request.url.path == "/robots.txt":
-            return httpx.Response(
-                200,
-                text="User-agent: *\nDisallow: /\n",
-            )
+            return httpx.Response(200, text="User-agent: *\nDisallow: /\n")
         return httpx.Response(200, content=b"Should not download")
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "blocked"
 
 
@@ -165,7 +157,6 @@ def test_robots_403_blocks_download(tmp_path):
         return httpx.Response(200, content=b"Should not download")
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "blocked"
 
 
@@ -177,7 +168,6 @@ def test_robots_network_error_blocks_download(tmp_path):
         return httpx.Response(200, content=b"Should not download")
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "blocked"
 
 
@@ -202,7 +192,6 @@ def test_successful_download_and_checksum(tmp_path):
     assert entries[0]["sha256"] == hashlib.sha256(content).hexdigest()
 
     saved_file = Path(entries[0]["file_path"])
-
     assert saved_file.exists()
     assert saved_file.read_bytes() == content
 
@@ -275,7 +264,6 @@ def test_refresh_handles_not_modified(tmp_path):
     def refresh_handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(404)
-
         assert request.headers.get("If-None-Match") == '"version-1"'
         return httpx.Response(304)
 
@@ -357,11 +345,9 @@ def test_retryable_503_retries(tmp_path, monkeypatch):
         calls["count"] += 1
         if calls["count"] == 1:
             return httpx.Response(503)
-
         return httpx.Response(200, content=b"Recovered")
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "downloaded"
     assert calls["count"] == 2
 
@@ -382,15 +368,10 @@ def test_retry_after_header_is_respected(tmp_path, monkeypatch):
 
         calls["count"] += 1
         if calls["count"] == 1:
-            return httpx.Response(
-                503,
-                headers={"Retry-After": "2"},
-            )
-
+            return httpx.Response(503, headers={"Retry-After": "2"})
         return httpx.Response(200, content=b"Success")
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "downloaded"
     assert 2.0 in waits
 
@@ -407,12 +388,10 @@ def test_non_retryable_error_does_not_retry(tmp_path, monkeypatch):
     def handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(404)
-
         calls["count"] += 1
         return httpx.Response(404)
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "failed"
     assert calls["count"] == 1
 
@@ -435,7 +414,6 @@ def test_interrupted_download_removes_partial_file(tmp_path, monkeypatch):
     def handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(404)
-
         return httpx.Response(200, stream=BrokenStream())
 
     results = run_fetch(make_source(), tmp_path, handler)
@@ -450,7 +428,6 @@ def test_file_size_limit_rejects_large_file(tmp_path):
     def handler(request):
         if request.url.path == "/robots.txt":
             return httpx.Response(404)
-
         return httpx.Response(
             200,
             headers={"Content-Length": str(201 * 1024 * 1024)},
@@ -458,7 +435,6 @@ def test_file_size_limit_rejects_large_file(tmp_path):
         )
 
     results = run_fetch(make_source(), tmp_path, handler)
-
     assert results[0]["result"] == "failed"
 
 
@@ -475,28 +451,24 @@ def test_concurrency_limit_is_respected(tmp_path):
 
         active += 1
         peak = max(peak, active)
-
         await asyncio.sleep(0.01)
-
         active -= 1
+
         return httpx.Response(200, content=b"Test document")
 
     async def run():
         sources = [make_source(f"https://example.com/file-{i}.pdf") for i in range(6)]
 
-        transport = httpx.MockTransport(handler)
-
         return await fetch_sources(
             sources,
             raw_dir=tmp_path / "raw",
             manifest_path=tmp_path / "manifest.jsonl",
-            transport=transport,
+            transport=make_transport(handler),
             delay=0,
             max_concurrency=2,
         )
 
     results = asyncio.run(run())
-
     assert all(item["result"] == "downloaded" for item in results)
     assert peak <= 2
 
@@ -523,7 +495,6 @@ def test_manual_registration_creates_manifest(tmp_path):
     assert result["sha256"] == hashlib.sha256(content).hexdigest()
 
     entries = read_manifest(manifest_path)
-
     assert len(entries) == 1
     assert entries[0]["title"] == "Cyclone Guide"
 
@@ -637,10 +608,7 @@ def test_sitemap_removes_duplicates():
 def test_sitemap_robots_disallow():
     def handler(request):
         if request.url.path == "/robots.txt":
-            return httpx.Response(
-                200,
-                text="User-agent: *\nDisallow: /",
-            )
+            return httpx.Response(200, text="User-agent: *\nDisallow: /")
         return httpx.Response(200, content=b"<urlset/>")
 
     with pytest.raises(PermissionError):
@@ -650,3 +618,72 @@ def test_sitemap_robots_disallow():
                 transport=make_transport(handler),
             )
         )
+
+
+# 27. Restart skips completed files and retries failed files
+def test_restart_skips_completed_and_retries_failed(tmp_path):
+    calls = {"first": 0, "second": 0}
+
+    first_source = make_source("https://example.com/first.pdf")
+    second_source = make_source("https://example.com/second.pdf")
+    sources = [first_source, second_source]
+
+    raw_dir = tmp_path / "raw"
+    manifest = tmp_path / "manifest.jsonl"
+
+    def first_run_handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+
+        if request.url.path == "/first.pdf":
+            calls["first"] += 1
+            return httpx.Response(200, content=b"First document")
+
+        calls["second"] += 1
+        return httpx.Response(500)
+
+    first_results = asyncio.run(
+        fetch_sources(
+            sources,
+            raw_dir=raw_dir,
+            manifest_path=manifest,
+            transport=make_transport(first_run_handler),
+            delay=0,
+        )
+    )
+
+    assert first_results[0]["result"] == "downloaded"
+    assert first_results[1]["result"] == "failed"
+
+    def restart_handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(404)
+
+        if request.url.path == "/first.pdf":
+            calls["first"] += 1
+            return httpx.Response(500)
+
+        calls["second"] += 1
+        return httpx.Response(200, content=b"Second document")
+
+    restart_results = asyncio.run(
+        fetch_sources(
+            sources,
+            raw_dir=raw_dir,
+            manifest_path=manifest,
+            transport=make_transport(restart_handler),
+            delay=0,
+        )
+    )
+
+    assert restart_results[0]["result"] == "skipped"
+    assert restart_results[1]["result"] == "downloaded"
+
+    assert calls["first"] == 1
+    assert calls["second"] > 1
+
+    first_filename = Fetcher._file_name(first_source["url"])
+    second_filename = Fetcher._file_name(second_source["url"])
+
+    assert (raw_dir / first_filename).exists()
+    assert (raw_dir / second_filename).exists()
