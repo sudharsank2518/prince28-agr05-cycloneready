@@ -7,6 +7,7 @@ import csv
 import hashlib
 import json
 import random
+import time
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -262,6 +263,7 @@ class Fetcher:
     async def fetch_one(self, source: dict) -> dict:
         """Download one approved source, or safely skip it."""
         url = source["url"]
+        started_at = time.perf_counter()
         host = urlparse(url).netloc
 
         previous = self.latest.get(url, {})
@@ -281,6 +283,7 @@ class Fetcher:
                 **source,
                 "status": "blocked",
                 "reason": ("robots.txt disallows fetching or could not be checked"),
+                "duration_seconds": round(time.perf_counter() - started_at, 3),
             }
 
             self._record(result)
@@ -296,9 +299,7 @@ class Fetcher:
 
         headers = {}
 
-        # ETag stretch feature:
-        # Send a conditional request only when refreshing
-        # and a previous complete local file exists.
+        # ETag stretch feature.
         if self.refresh and previous.get("etag") and self._already_downloaded(url):
             headers["If-None-Match"] = previous["etag"]
 
@@ -327,6 +328,8 @@ class Fetcher:
                                 "sha256": previous.get("sha256"),
                                 "bytes": previous.get("bytes"),
                                 "http_status": 304,
+                                "attempts": attempt,
+                                "duration_seconds": round(time.perf_counter() - started_at, 3),
                             }
 
                             self._record(result)
@@ -385,6 +388,7 @@ class Fetcher:
                             "http_status": response.status_code,
                             "etag": response.headers.get("ETag"),
                             "attempts": attempt,
+                            "duration_seconds": round(time.perf_counter() - started_at, 3),
                         }
 
                         self._record(result)
@@ -430,6 +434,7 @@ class Fetcher:
                     "status": "failed",
                     "reason": str(error),
                     "attempts": attempt,
+                    "duration_seconds": round(time.perf_counter() - started_at, 3),
                 }
 
                 self._record(result)
@@ -447,6 +452,7 @@ class Fetcher:
             "status": "failed",
             "reason": "Retry limit reached",
             "attempts": MAX_ATTEMPTS,
+            "duration_seconds": round(time.perf_counter() - started_at, 3),
         }
 
         self._record(result)
