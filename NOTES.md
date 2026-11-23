@@ -382,3 +382,45 @@ All timestamps below are in Indian Standard Time (IST).
 - [ ] Share the live URL with the trainer.
 
 **Live Project:** https://cycloneready.onrender.com
+
+
+## 12. Day 6 — Corpus Collection and Stretch Tasks
+
+### Implementation
+- [x] Implemented the resumable document downloader.
+- [x] Added source review and licence tracking.
+- [x] Added dataset and capacity report generation.
+- [x] Added SHA-256 duplicate finder.
+- [x] Added manifest-based S3-compatible storage uploader.
+- [x] Configured local Silo object storage using Docker Compose.
+- [x] Verified sample file upload to local storage.
+
+### Testing and verification
+- [x] Downloader unit tests: 26 passed.
+- [x] Full unit test suite: 40 passed.
+- [x] Ruff lint: passed.
+- [x] Ruff formatting: passed.
+- [x] Dataset report generated successfully.
+- [x] Capacity report generated successfully.
+- [x] Production deployment verified with the latest main commit.
+
+### Corpus status
+- Documents collected: 0.
+- PDF pages collected: 0.
+- Extracted tokens: 0.
+- Duplicate SHA-256 groups: 0.
+- No files uploaded from the actual corpus.
+
+### Source and permission gaps
+- NDMA robots access returned 403; automated access rules need clarification.
+- TNSDMA SSL certificate issue remains unresolved.
+- IMD/RSMC reproduction permission requires confirmation.
+- No source has yet been approved for automated downloading or reproduction.
+
+### Remaining work
+- [ ] Obtain source permissions and verify access rules.
+- [ ] Collect the approved start corpus.
+- [ ] Test interrupted download and resume behaviour.
+- [ ] Verify actual corpus uploads to local Silo.
+- [ ] Measure a representative sample and update capacity estimates.
+- [ ] Record final Day 6 metrics and observations.
