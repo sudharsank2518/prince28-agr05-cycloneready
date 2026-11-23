@@ -687,3 +687,62 @@ def test_restart_skips_completed_and_retries_failed(tmp_path):
 
     assert (raw_dir / first_filename).exists()
     assert (raw_dir / second_filename).exists()
+
+
+# 28. Cancelling a download removes the incomplete partial file
+def test_cancelled_download_removes_partial_file(tmp_path):
+    async def run():
+        started = asyncio.Event()
+
+        class SlowStream(httpx.AsyncByteStream):
+            async def __aiter__(self):
+                # Write some content before the download is cancelled.
+                yield b"Partial download content"
+
+                # Signal that the partial content has been written.
+                started.set()
+
+                # Keep the download running until it is cancelled.
+                await asyncio.Event().wait()
+
+            async def aclose(self):
+                pass
+
+        def handler(request):
+            if request.url.path == "/robots.txt":
+                return httpx.Response(404)
+
+            return httpx.Response(
+                200,
+                stream=SlowStream(),
+            )
+
+        source = make_source()
+        raw_dir = tmp_path / "raw"
+        manifest_path = tmp_path / "manifest.jsonl"
+
+        download_task = asyncio.create_task(
+            fetch_sources(
+                [source],
+                raw_dir=raw_dir,
+                manifest_path=manifest_path,
+                transport=make_transport(handler),
+                delay=0,
+            )
+        )
+
+        # Wait until the partial content has been written.
+        await asyncio.wait_for(started.wait(), timeout=5)
+
+        # Cancel the download.
+        download_task.cancel()
+
+        # Cancellation should propagate to the caller.
+        with pytest.raises(asyncio.CancelledError):
+            await download_task
+
+        # No incomplete or final file should remain.
+        assert not list(raw_dir.glob("*.part"))
+        assert not list(raw_dir.glob("*"))
+
+    asyncio.run(run())
