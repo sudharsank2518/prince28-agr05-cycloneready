@@ -454,7 +454,7 @@ Permission requests were sent on 23 November 2026.
 
 - [ ] Obtain source permissions and verify access rules.
 - [ ] Collect the approved initial document corpus.
-- [ ] Perform a real interrupted-download and restart test.
+- [x] Perform a real interrupted-download and restart test using a local synthetic HTTP server: Run 1 interrupted with Ctrl+C after the fast file completed; Run 2 skipped the completed file and downloaded the interrupted file; Run 3 skipped both files. Verified manifest entries and SHA-256 hashes.
 - [ ] Upload actual corpus documents to local Silo.
 - [ ] Measure a representative document sample.
 - [ ] Update capacity estimates using measured data.
