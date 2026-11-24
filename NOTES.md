@@ -404,7 +404,10 @@ All timestamps below are in Indian Standard Time (IST).
 ### 2. Testing and Verification
 
 - [x] Downloader unit tests: 28 passed.
-- [x] Full test suite: 42 passed.
+- [x] Full test suite: 45 passed.
+- [x] Duplicate detection unit tests: 3 passed.
+- [x] Duplicate detection tests cover matching SHA-256 hashes, failed downloads and missing manifests.
+- [x] Duplicate detection test lint and formatting checks: passed.
 - [x] Ruff lint: passed.
 - [x] Ruff formatting: passed.
 - [x] ETag / HTTP 304 conditional request test: 1 passed.
