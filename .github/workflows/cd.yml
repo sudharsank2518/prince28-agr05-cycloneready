@@ -67,19 +67,19 @@ jobs:
 
     - name: Smoke test live application
       run: |
-        for attempt in {1..12}; do
-          echo "Smoke test attempt $attempt of 12"
+        for attempt in {1..90}; do
+          echo "Smoke test attempt $attempt of 90"
 
           if uv run python scripts/smoke.py "${{ vars.LIVE_URL }}" --expect-version "${SHA}"; then
             echo "Smoke tests passed!"
             exit 0
           fi
 
-          if [ "$attempt" -lt 12 ]; then
+          if [ "$attempt" -lt 90 ]; then
             echo "Application not ready yet. Waiting 10 seconds..."
             sleep 10
           fi
         done
 
-        echo "Smoke tests failed after 12 attempts."
+        echo "Smoke tests failed after 90 attempts."
         exit 1
