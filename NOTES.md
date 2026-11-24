@@ -396,6 +396,7 @@ All timestamps below are in Indian Standard Time (IST).
 - [x] Added source review and licence tracking.
 - [x] Added dataset and capacity report generation.
 - [x] Added SHA-256 duplicate detection.
+- [x] Implemented ETag-based conditional requests using If-None-Match and HTTP 304 handling.
 - [x] Added manifest-based S3-compatible storage uploader.
 - [x] Configured local Silo object storage using Docker Compose.
 - [x] Verified a sample file upload to local Silo storage.
@@ -406,6 +407,9 @@ All timestamps below are in Indian Standard Time (IST).
 - [x] Full test suite: 42 passed.
 - [x] Ruff lint: passed.
 - [x] Ruff formatting: passed.
+- [x] ETag / HTTP 304 conditional request test: 1 passed.
+- [x] Silo uploader dry-run verified; no corpus files available to upload.
+- [x] Dataset and capacity reports regenerated; current corpus baseline is 0 files and 0 pages.
 - [x] Mocked downloader restart/resume test: passed.
 - [x] Interrupted-download cleanup test: passed.
 - [x] Cancellation cleanup test: passed.
@@ -459,11 +463,14 @@ Permission requests were sent on 23 November 2026.
 - [ ] Measure a representative document sample.
 - [ ] Update capacity estimates using measured data.
 - [ ] Record final corpus metrics and observations.
+- [ ] Verify duplicate detection against actual collected documents.
 
 ### 7. Day 6 Status
 
-Downloader implementation, source-review documentation, reporting, duplicate detection, local object storage setup and automated tests are completed.
+Downloader implementation, ETag handling, source-review documentation, reporting, duplicate-detection implementation, local object storage setup and automated tests are completed and verified.
 
-Corpus collection and final capacity measurements remain pending because source permissions have not yet been confirmed.
+The Silo uploader dry-run and code-quality checks have also been verified.
+
+Corpus collection, real-corpus duplicate validation, actual corpus upload and final capacity measurements remain pending because source permissions have not yet been confirmed.
 
 **Day 6 is partially completed; final collection and validation are pending.**
