@@ -235,13 +235,40 @@ class Fetcher:
                 return None
 
     @staticmethod
-    def _file_name(url: str) -> str:
-        """Create a stable, collision-resistant filename from the URL."""
+    def _file_name(url: str, content_type: str | None = None) -> str:
+        """Create a stable filename using the URL and response content type."""
         digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
         suffix = Path(urlparse(url).path).suffix.lower()
 
-        if not suffix or len(suffix) > 10:
-            suffix = ".bin"
+        supported_suffixes = {
+            ".pdf",
+            ".html",
+            ".htm",
+            ".txt",
+            ".md",
+            ".rst",
+            ".adoc",
+            ".asciidoc",
+            ".csv",
+            ".json",
+            ".xml",
+        }
+
+        if suffix not in supported_suffixes:
+            media_type = (content_type or "").split(";", 1)[0].strip().lower()
+
+            content_types = {
+                "application/pdf": ".pdf",
+                "text/html": ".html",
+                "application/xhtml+xml": ".html",
+                "text/csv": ".csv",
+                "application/json": ".json",
+                "application/xml": ".xml",
+                "text/xml": ".xml",
+                "text/plain": ".txt",
+            }
+
+            suffix = content_types.get(media_type, ".bin")
 
         return f"{digest}{suffix}"
 
@@ -279,7 +306,7 @@ class Fetcher:
             result = {
                 **source,
                 "status": "blocked",
-                "reason": ("robots.txt disallows fetching or could not be checked"),
+                "reason": "robots.txt disallows fetching or could not be checked",
                 "duration_seconds": round(time.perf_counter() - started_at, 3),
             }
 
@@ -290,14 +317,12 @@ class Fetcher:
                 "result": "blocked",
             }
 
-        filename = self._file_name(url)
-        final_path = self.raw_dir / filename
-        temp_path = final_path.with_suffix(final_path.suffix + ".part")
-
         headers = {}
 
         if self.refresh and previous.get("etag") and self._already_downloaded(url):
             headers["If-None-Match"] = previous["etag"]
+
+        temp_path = None
 
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
@@ -322,6 +347,7 @@ class Fetcher:
                                 "etag": previous.get("etag"),
                                 "sha256": previous.get("sha256"),
                                 "bytes": previous.get("bytes"),
+                                "content_type": previous.get("content_type"),
                                 "http_status": 304,
                                 "attempts": attempt,
                                 "duration_seconds": round(time.perf_counter() - started_at, 3),
@@ -343,6 +369,14 @@ class Fetcher:
                             )
 
                         response.raise_for_status()
+
+                        content_type = response.headers.get("Content-Type")
+
+                        # Determine the correct extension from the URL
+                        # and the actual HTTP response Content-Type.
+                        filename = self._file_name(url, content_type)
+                        final_path = self.raw_dir / filename
+                        temp_path = final_path.with_suffix(final_path.suffix + ".part")
 
                         content_length = response.headers.get("Content-Length")
 
@@ -366,12 +400,10 @@ class Fetcher:
                             temp_path.replace(final_path)
 
                         except asyncio.CancelledError:
-                            # Clean up incomplete downloads when cancelled.
                             temp_path.unlink(missing_ok=True)
                             raise
 
                         except Exception:
-                            # Clean up incomplete downloads on other errors.
                             temp_path.unlink(missing_ok=True)
                             raise
 
@@ -381,7 +413,7 @@ class Fetcher:
                             "file_path": str(final_path).replace("\\", "/"),
                             "sha256": digest.hexdigest(),
                             "bytes": total_bytes,
-                            "content_type": response.headers.get("Content-Type"),
+                            "content_type": content_type,
                             "http_status": response.status_code,
                             "etag": response.headers.get("ETag"),
                             "attempts": attempt,
@@ -413,6 +445,9 @@ class Fetcher:
                 httpx.TimeoutException,
                 httpx.NetworkError,
             ):
+                if temp_path is not None:
+                    temp_path.unlink(missing_ok=True)
+
                 if attempt == MAX_ATTEMPTS:
                     break
 
@@ -424,12 +459,13 @@ class Fetcher:
                 await asyncio.sleep(wait)
 
             except asyncio.CancelledError:
-                # Ensure cancellation propagates without recording a failure.
-                temp_path.unlink(missing_ok=True)
+                if temp_path is not None:
+                    temp_path.unlink(missing_ok=True)
                 raise
 
             except Exception as error:
-                temp_path.unlink(missing_ok=True)
+                if temp_path is not None:
+                    temp_path.unlink(missing_ok=True)
 
                 result = {
                     **source,
@@ -447,7 +483,8 @@ class Fetcher:
                     "reason": str(error),
                 }
 
-        temp_path.unlink(missing_ok=True)
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
         result = {
             **source,
