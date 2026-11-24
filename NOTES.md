@@ -477,3 +477,10 @@ The Silo uploader dry-run and code-quality checks have also been verified.
 Corpus collection, real-corpus duplicate validation, actual corpus upload and final capacity measurements remain pending because source permissions have not yet been confirmed.
 
 **Day 6 is partially completed; final collection and validation are pending.**
+
+### Day 7 — PDF Parser Comparison
+
+Files compared: 0
+
+No approved PDF files were available for comparison.
+The real ten-file comparison is pending corpus collection and source permissions.
