@@ -1,5 +1,8 @@
-from datetime import date
+"""Integration tests for LLM call recording and usage reporting."""
+
+from datetime import datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -67,7 +70,9 @@ async def test_get_daily_usage(settings):
                 fallback_used=True,
             )
 
-            usage = await repository.get_daily_usage(date.today())
+            # Match the Asia/Kolkata date used by daily usage reporting.
+            india_today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+            usage = await repository.get_daily_usage(india_today)
 
             assert usage["total_calls"] >= 1
             assert usage["total_input_tokens"] >= 120
