@@ -650,3 +650,142 @@ Latest verification:
 | Git diff whitespace check | Passed |
 
 **Note:** The above records completed work and test evidence. Final Git review, documentation commit and other outstanding delivery tasks should be marked complete only after they have actually been performed.
+
+---
+
+## Day 8 – LLM Gateway, Reliability and Usage Tracking
+
+### 1. LLM Gateway
+
+- [x] Implemented a centralized LLM gateway.
+- [x] Configured Gemini as the primary provider.
+- [x] Configured Groq as the fallback provider.
+- [x] Updated the primary model to `gemini-3.5-flash-lite` after verifying provider availability.
+- [x] Configured fallback model `openai/gpt-oss-20b`.
+- [x] Implemented provider selection and fallback handling.
+- [x] Added provider and model information to gateway responses.
+
+### 2. Reliability and Retry Handling
+
+- [x] Implemented retry handling for provider failures.
+- [x] Added retryable and non-retryable error handling.
+- [x] Added circuit-breaker functionality.
+- [x] Verified automatic fallback using a simulated Gemini failure and a real Groq request.
+- [x] Verified that the circuit breaker opens after repeated failures.
+- [x] Verified that requests bypass an open primary circuit.
+
+### 3. Usage and Cost Tracking
+
+- [x] Added input and output token tracking.
+- [x] Added token estimation when provider usage information is unavailable.
+- [x] Implemented INR cost calculation using model-specific pricing.
+- [x] Added gateway recording for provider calls.
+- [x] Added usage tracking support.
+
+### 4. Streaming and Prompt Management
+
+- [x] Implemented LLM streaming support.
+- [x] Added a final `done` event containing usage and request information.
+- [x] Loaded the system prompt from `prompts/chat_system_v1.md` during application startup.
+- [x] Added the prompts directory to the final Docker image.
+
+### 5. API Integration
+
+- [x] Integrated the LLM gateway with the chat API.
+- [x] Implemented the `/v1/chat` endpoint.
+- [x] Implemented the `/v1/usage` endpoint.
+- [x] Added the `/v1/llm/status` endpoint to expose provider and circuit-breaker status.
+- [x] Limited conversation history to the six previous messages plus the current message.
+
+### 6. Stretch Tasks
+
+- [x] Added optional Ollama tertiary fallback configuration.
+- [x] Configured the default Ollama endpoint as `http://localhost:11434/v1`.
+- [x] Kept Ollama disabled by default so it is only used when explicitly enabled.
+- [x] Added the LLM status endpoint.
+- [x] Added conversation-history limiting.
+- [x] Created `scripts/llm_latency.sql` for PostgreSQL p50 and p95 latency analysis, including overall and provider/model breakdowns.
+
+### 7. Testing and Code Quality
+
+- [x] LLM retry tests passed.
+- [x] Token estimation tests passed.
+- [x] LLM API tests passed.
+- [x] Targeted LLM tests: 19 passed.
+- [x] Full unit test suite: 88 passed.
+- [x] Ruff checks on the updated gateway, initialization and status route: passed.
+- [x] Real Gemini primary-provider test: passed.
+- [x] Real Groq fallback test: passed.
+- [x] Circuit-breaker test: passed.
+
+Optional warning: PySocks is not installed. This did not affect the successful test run.
+
+### 8. Latency Analysis
+
+- SQL script: `scripts/llm_latency.sql`.
+- Database table: `llm_calls`.
+- Uses PostgreSQL `percentile_cont`.
+- Measures average, p50 and p95 latency.
+- Includes overall latency statistics.
+- Includes provider/model-wise latency statistics.
+
+**Actual Neon PostgreSQL results (26 November 2026):**
+
+Overall successful calls:
+
+| Metric | Result |
+|---|---:|
+| Successful calls | 2 |
+| Average latency | 4943.00 ms |
+| p50 latency | 4943.00 ms |
+| p95 latency | 6418.10 ms |
+
+Provider/model breakdown:
+
+| Provider | Model | Successful calls | Average latency | p50 | p95 |
+|---|---|---:|---:|---:|---:|
+| Gemini | gemini-3.5-flash-lite | 2 | 4943.00 ms | 4943.00 ms | 6418.10 ms |
+
+- [x] Overall latency SQL executed successfully.
+- [x] Provider/model latency SQL executed successfully.
+- [x] Results verified in Neon SQL Editor.
+
+**Latency analysis stretch task: Completed and verified.**
+
+### 9. Important Day 8 Files
+
+- `src/cycloneready/llm/gateway.py`
+- `src/cycloneready/llm/__init__.py`
+- `src/cycloneready/api/routes/llm.py`
+- `src/cycloneready/api/routes/chat.py`
+- `src/cycloneready/api/main.py`
+- `prompts/chat_system_v1.md`
+- `scripts/test_gateway.py`
+- `scripts/test_fallback.py`
+- `scripts/test_circuit_breaker.py`
+- `scripts/llm_latency.sql`
+- `.env.example`
+
+### 10. Day 8 Status
+
+LLM gateway implementation, provider fallback, retry handling, circuit breaker, token estimation, INR cost calculation, chat integration, status endpoint, optional Ollama configuration and conversation-history limiting have been implemented.
+
+Verification completed:
+
+- [x] Full unit test suite passed.
+- [x] Real Gemini primary-provider request verified.
+- [x] Real Groq fallback verified.
+- [x] Circuit-breaker status endpoint verified.
+- [x] Normal chat request recorded in Neon.
+- [x] Streaming chat request verified.
+- [x] Final SSE done event verified.
+- [x] Daily usage endpoint verified.
+- [x] Token counts, latency and INR cost verified in PostgreSQL.
+- [x] Overall p50/p95 latency SQL verified.
+- [x] Provider/model p50/p95 latency SQL verified.
+- [x] CLI experiment completed.
+- [x] English/Tamil token estimation experiment completed.
+
+Remaining work includes final Docker and integration verification, checking Ollama availability if required, and Git review and delivery.
+
+**Day 8 implementation, automated testing and the verified latency analysis are completed. Final delivery verification remains.**

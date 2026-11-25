@@ -1,15 +1,19 @@
 """Tables, written as Python classes. Alembic turns changes here into migrations."""
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     MetaData,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -173,4 +177,44 @@ class CycloneObservation(Base):
             "ix_cyclone_observations_wind_speed",
             "wind_speed_kt",
         ),
+    )
+
+
+class LlmCall(Base):
+    """Records every LLM request, including failures and fallback usage."""
+
+    __tablename__ = "llm_calls"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    request_id: Mapped[str] = mapped_column(String(64), index=True)
+
+    provider: Mapped[str] = mapped_column(String(30))
+    model: Mapped[str] = mapped_column(String(120))
+
+    purpose: Mapped[str] = mapped_column(String(80))
+    prompt_version: Mapped[str] = mapped_column(String(50))
+
+    status: Mapped[str] = mapped_column(String(20))
+    error: Mapped[str | None] = mapped_column(Text)
+
+    input_tokens: Mapped[int | None] = mapped_column(Integer)
+    output_tokens: Mapped[int | None] = mapped_column(Integer)
+
+    latency_ms: Mapped[int] = mapped_column(Integer)
+
+    cost_inr: Mapped[Decimal] = mapped_column(
+        Numeric(12, 6),
+        server_default="0",
+    )
+
+    fallback_used: Mapped[bool] = mapped_column(
+        Boolean,
+        server_default=text("false"),
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        index=True,
     )
