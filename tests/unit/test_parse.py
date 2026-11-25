@@ -6,7 +6,11 @@ import pymupdf
 import pytest
 
 from cycloneready.ingest.parse import (
+    PAGE_CHARS,
     ParseError,
+    _parse_ibtracs_csv,
+    _split_pages,
+    _table_to_markdown,
     clean_text,
     parse_file,
 )
@@ -110,6 +114,38 @@ def test_clean_text_preserves_tamil_unicode():
     value = "தமிழ்நாடு பேரிடர் மேலாண்மை"
 
     assert clean_text(value) == value
+
+
+def test_split_pages_empty_text():
+    assert _split_pages("") == []
+
+
+def test_split_pages_short_text():
+    text = "Cyclone preparedness information."
+
+    assert _split_pages(text) == [text]
+
+
+def test_split_pages_long_text_preserves_content():
+    text = "x" * (PAGE_CHARS * 2 + 17)
+
+    pages = _split_pages(text)
+
+    assert len(pages) == 3
+    assert "".join(pages) == text
+    assert all(len(page) <= PAGE_CHARS for page in pages)
+
+
+def test_split_pages_prefers_newline_boundary():
+    first = "A" * (PAGE_CHARS // 2 + 10)
+    second = "B" * PAGE_CHARS
+    text = first + "\n" + second
+
+    pages = _split_pages(text)
+
+    assert len(pages) == 2
+    assert pages[0] == first
+    assert pages[1] == second
 
 
 def test_markdown_heading_paths(tmp_path: Path):
@@ -223,3 +259,70 @@ def test_missing_file(tmp_path: Path):
         parse_file(path)
 
     assert error.value.reason == "corrupt"
+
+
+def test_table_to_markdown():
+    table = [
+        ["Storm", "Wind"],
+        ["Cyclone A", "120 knots"],
+        ["Cyclone B", "95 knots"],
+    ]
+
+    markdown = _table_to_markdown(table)
+
+    assert "| Storm | Wind |" in markdown
+    assert "| --- | --- |" in markdown
+    assert "| Cyclone A | 120 knots |" in markdown
+    assert "| Cyclone B | 95 knots |" in markdown
+
+
+def test_table_to_markdown_handles_empty_cells_and_pipes():
+    table = [
+        ["Storm", "Details"],
+        ["Cyclone A", ""],
+        ["Cyclone B", "Wind | Rain"],
+    ]
+
+    markdown = _table_to_markdown(table)
+
+    assert "| Cyclone A |  |" in markdown
+    assert r"Wind \| Rain" in markdown
+
+
+def create_ibtracs_csv(path: Path, rows: list[str]) -> Path:
+    """Create a small IBTrACS CSV file for parser tests."""
+    content = (
+        "SID,NUMBER,BASIN,SUBBASIN,ISO_TIME,NATURE,LAT,LON,WMO_WIND,WMO_PRES\n"
+        ", , , , , ,degrees_north,degrees_east,kts,mb\n" + "\n".join(rows)
+    )
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_ibtracs_longitude_normalization(tmp_path: Path):
+    path = create_ibtracs_csv(
+        tmp_path / "cyclones.csv",
+        ["TEST02,2,WP,AS,2020-01-01 00:00:00,TS,10,200,80,990"],
+    )
+
+    parsed = _parse_ibtracs_csv(path)
+
+    assert len(parsed.observations) == 1
+    assert parsed.observations[0].longitude == -160
+
+
+def test_ibtracs_skips_invalid_coordinates(tmp_path: Path):
+    path = create_ibtracs_csv(
+        tmp_path / "cyclones.csv",
+        [
+            "TEST01,1,WP,AS,2020-01-01 00:00:00,TS,95,100,80,990",
+            "TEST02,2,WP,AS,2020-01-01 00:00:00,TS,10,-181,80,990",
+            "TEST04,4,WP,AS,2020-01-01 00:00:00,TS,10,400,80,990",
+            "TEST03,3,WP,AS,2020-01-01 00:00:00,TS,10,100,80,990",
+        ],
+    )
+
+    parsed = _parse_ibtracs_csv(path)
+
+    assert len(parsed.observations) == 1
+    assert parsed.observations[0].storm_id == "TEST03"

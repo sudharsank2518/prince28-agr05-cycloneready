@@ -1,30 +1,48 @@
 # CycloneReady Capacity Estimate
 
-## Measured corpus
+## Current measured corpus
 
-- Current PDF pages: 0
-- Extracted text tokens: 0
-- Measured tokens per page: Not available (no PDF sample pages measured)
-- Current disk usage: 0.00 MB
+- Collected files: 1
+- PDF pages: 0
+- Approximate extracted text tokens: 4,023,002
+- Approximate 500-token chunks: 8,047
+- Measured PDF tokens per page: Not applicable (no PDF sample pages measured)
+- Current disk usage: 15.51 MB
 
-## Full corpus estimate
+The current corpus contains historical cyclone data. Token counts are approximate character-based estimates, not exact tokenizer results.
 
-- Target pages: 3,000
-- Estimated tokens: Not available (collect a representative sample first)
-- Estimated 500-token chunks: Not available
+## Planned project knowledge
 
-The full-corpus estimate is unavailable until a representative sample has been collected and measured. It is not zero.
+CycloneReady will include an original solution document developed by the project team.
+
+- Cyclone preparedness and response.
+- Urban flood preparedness and response.
+- Realistic Tamil Nadu disaster scenarios.
+- Evacuation and emergency planning.
+- Community awareness and recovery recommendations.
+
+The document has not yet been created or measured. Its storage, token count and chunk count are not included in current measurements.
+
+## Capacity estimates
+
+A full capacity estimate will be prepared after the original solution document and any additional reviewed datasets are available.
+
+- Measure actual text using the selected tokenizer.
+- Estimate chunks using the chosen chunk size and overlap.
+- Measure embedding storage using the selected embedding model.
+- Measure PostgreSQL and vector-index storage using the actual database.
 
 ## Capacity questions
 
-1. Embedding cost: Not calculated. Select an embedding provider and use its current published pricing with the measured token count.
-2. PostgreSQL capacity: Not verified. Compare measured text and vector storage against the actual database plan limit.
-3. Least certain estimate: Tokens per page. Measure a larger, representative sample, including scanned PDFs and OCR output.
-4. At 10x corpus size: Expect approximately 10x the text, embedding and storage requirements, subject to chunk overlap, metadata and index overhead.
+1. Embedding cost: Not calculated. Choose an embedding provider and use its published pricing with the measured token count.
+2. PostgreSQL capacity: Not fully verified. Measure actual text, metadata and vector storage against the database plan limits.
+3. Least certain estimate: Future knowledge-base size and token count. The original solution document and additional evidence sources have not yet been finalized.
+4. At 10x corpus size: Text storage and embedding requirements may grow approximately 10x. Actual database usage may be higher due to metadata, indexes and chunk overlap.
 
 ## Limitations
 
 - Token counts are approximate, using extracted characters divided by four.
-- Scanned pages without OCR may contribute zero tokens.
-- Chunk estimates use 500 tokens per chunk and do not account for overlap.
+- The current dataset has no PDF pages.
+- The current measurements do not include the future solution document.
 - No embedding provider, vector dimension or database storage cost is assumed.
+- Historical cyclone observations alone do not represent the complete knowledge required for disaster preparedness and response.
