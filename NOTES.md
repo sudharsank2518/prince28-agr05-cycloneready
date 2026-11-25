@@ -214,7 +214,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 
 ## D05 – CI/CD and Going Live
 
-## 1. GitHub Actions – Continuous Integration
+### 1. GitHub Actions – Continuous Integration
 
 - Created `.github/workflows/ci.yml`.
 - CI runs automatically on pull requests and pushes to `main`.
@@ -225,7 +225,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - Pre-commit checks executed in CI.
 - CI checks passed successfully.
 
-## 2. GitHub Actions – Continuous Deployment
+### 2. GitHub Actions – Continuous Deployment
 
 - Created `.github/workflows/cd.yml`.
 - Automatic deployment triggered after successful CI on `main`.
@@ -235,7 +235,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - Added manual workflow dispatch to support rollback and roll-forward.
 - Successful automatic deployments verified through GitHub Actions.
 
-## 3. Production Deployment – Render
+### 3. Production Deployment – Render
 
 - Hosting platform: Render.
 - Service name: `cycloneready`.
@@ -246,7 +246,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - Production environment variables configured in Render.
 - Health endpoint verified successfully.
 
-## 4. GitHub Repository Security
+### 4. GitHub Repository Security
 
 - Configured branch protection for `main`.
 - Pull requests required before merging.
@@ -262,7 +262,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
   - `LIVE_URL`
 - No database credentials or deploy hooks committed to Git.
 
-## 5. UptimeRobot Monitoring
+### 5. UptimeRobot Monitoring
 
 - Monitor name: CycloneReady API.
 - Monitoring URL: https://cycloneready.onrender.com/health
@@ -274,7 +274,7 @@ Dockerfile, Docker Compose, PostgreSQL integration, Redis, healthchecks, unit te
 - Uptime badge configured in README.md.
 - Monitor-specific API key is not stored in Git or project files.
 
-## 6. Nightly Production Health Check
+### 6. Nightly Production Health Check
 
 - Created `.github/workflows/nightly-health.yml`.
 - Scheduled execution: Every day at 12:00 AM IST.
@@ -298,7 +298,7 @@ Health response: {"status":"ok","app":"cycloneready","env":"production","version
 CycloneReady is healthy!
 ```
 
-## 7. Rollback and Roll-forward Drill
+### 7. Rollback and Roll-forward Drill
 
 **Rollback:**
 
@@ -326,7 +326,7 @@ CycloneReady is healthy!
 - The rollback did not downgrade or delete database schema changes.
 - The newer schema changes were additive, so the older application version could continue operating without using the additional column and index.
 
-## 8. Production Deployment Lead Time
+### 8. Production Deployment Lead Time
 
 Measured lead time from PR merge until the successful production smoke test.
 
@@ -347,7 +347,7 @@ All timestamps below are in Indian Standard Time (IST).
 - Slowest CD step: `Smoke test live application`.
 - Longest observed smoke-test duration: 35 seconds (CD #6).
 
-## 9. Stretch Tasks
+### 9. Stretch Tasks
 
 - Dependabot weekly GitHub Actions dependency updates configured.
 - Pre-commit checks added to CI.
@@ -355,14 +355,14 @@ All timestamps below are in Indian Standard Time (IST).
 - Rollback and roll-forward tested successfully.
 - Production environment approval gate not enabled because this is a solo automatic deployment workflow; enabling a required reviewer would interrupt unattended deployments.
 
-## 10. Useful Production URLs
+### 10. Useful Production URLs
 
 - Live application: https://cycloneready.onrender.com
 - API documentation: https://cycloneready.onrender.com/docs
 - Health check: https://cycloneready.onrender.com/health
 - GitHub repository: https://github.com/sudharsank2518/prince28-agr05-cycloneready
 
-## 11. Day 5 Status
+### 11. Day 5 Status
 
 - [x] CI workflow configured and verified.
 - [x] Main branch protection configured.
@@ -404,15 +404,12 @@ All timestamps below are in Indian Standard Time (IST).
 ### 2. Testing and Verification
 
 - [x] Downloader unit tests: 28 passed.
-- [x] Full test suite: 45 passed.
+- [x] Full test suite at the earlier Day 6 checkpoint: 45 passed.
 - [x] Duplicate detection unit tests: 3 passed.
 - [x] Duplicate detection tests cover matching SHA-256 hashes, failed downloads and missing manifests.
 - [x] Duplicate detection test lint and formatting checks: passed.
-- [x] Ruff lint: passed.
-- [x] Ruff formatting: passed.
 - [x] ETag / HTTP 304 conditional request test: 1 passed.
-- [x] Silo uploader dry-run verified; no corpus files available to upload.
-- [x] Dataset and capacity reports regenerated; current corpus baseline is 0 files and 0 pages.
+- [x] Silo uploader dry-run verified.
 - [x] Mocked downloader restart/resume test: passed.
 - [x] Interrupted-download cleanup test: passed.
 - [x] Cancellation cleanup test: passed.
@@ -425,11 +422,15 @@ All timestamps below are in Indian Standard Time (IST).
 
 ### 3. Corpus Status
 
-- Documents collected: 0.
-- PDF pages collected: 0.
-- Extracted tokens: 0.
-- Duplicate SHA-256 groups: 0.
-- Actual corpus files uploaded to Silo: 0.
+The original project-authored PDF test corpus is tracked separately from the downloader's manifest-backed external-source collection.
+
+- External manifest-backed documents collected: 0.
+- External manifest-backed PDF pages collected: 0.
+- External corpus extracted tokens: Not measured.
+- External corpus duplicate SHA-256 groups: Not measured.
+- Original project-authored test PDFs generated: 10.
+- Original test PDF pages: 20.
+- Original test corpus location: `data/test_corpus/pdfs/`.
 - Sample storage upload verified separately.
 
 ### 4. Source Review and Permission Requests
@@ -445,28 +446,35 @@ Permission requests were sent on 23 November 2026.
 - NDMA robots.txt returned HTTP 403; automated access rules remain unverified.
 - TNSDMA SSL certificate verification issue remains unresolved.
 - IMD/RSMC robots.txt returned HTTP 404; reproduction permission is still pending.
-- No source has yet been approved for automated downloading or reproduction.
 - Source decisions are documented in `docs/SOURCE_REVIEW.md`.
+
+**Project data clarification:**
+
+The PDF parser benchmark uses original project-authored illustrative documents. These documents were created for this college project and do not reproduce official warnings, forecasts or government publications.
+
+External source permissions are not a blocker for creating and testing this original project corpus. Any future automated downloading or reproduction of third-party documents remains subject to the relevant source terms and permissions.
 
 ### 5. Capacity Report
 
-- Current corpus size: 0 documents and 0 pages.
-- Tokens per page: Not yet measurable.
-- Embedding cost: Not calculated because no representative corpus has been collected.
-- PostgreSQL capacity: Not yet verified against a measured corpus.
-- A representative approved document sample is required before reliable capacity estimates can be made.
+- External manifest-backed corpus size: 0 documents and 0 pages.
+- Original PDF test corpus: 10 documents and 20 pages.
+- Tokens per page for the external corpus: Not measured.
+- Embedding cost for a larger external corpus: Not calculated.
+- PostgreSQL capacity against a larger external document corpus: Not yet verified.
 - The expected effect of a 10x corpus increase is documented in `docs/CAPACITY.md`.
+
+The original PDF test corpus supports parser benchmarking but should not be treated as a representative collection of official external documents for production capacity estimates.
 
 ### 6. Remaining Work
 
-- [ ] Obtain source permissions and verify access rules.
-- [ ] Collect the approved initial document corpus.
+- [x] Create an original 10-PDF test corpus for the college project.
+- [x] Verify that each generated PDF contains exactly two pages.
 - [x] Perform a real interrupted-download and restart test using a local synthetic HTTP server: Run 1 interrupted with Ctrl+C after the fast file completed; Run 2 skipped the completed file and downloaded the interrupted file; Run 3 skipped both files. Verified manifest entries and SHA-256 hashes.
-- [ ] Upload actual corpus documents to local Silo.
-- [ ] Measure a representative document sample.
-- [ ] Update capacity estimates using measured data.
-- [ ] Record final corpus metrics and observations.
-- [ ] Verify duplicate detection against actual collected documents.
+- [ ] Upload actual external corpus documents to local Silo if external-source collection is undertaken.
+- [ ] Measure a representative external document sample if required for capacity planning.
+- [ ] Update capacity estimates using measured external corpus data.
+- [x] Record original test corpus metrics and PDF parser comparison results.
+- [ ] Verify duplicate detection against a larger external collected corpus if one is added.
 
 ### 7. Day 6 Status
 
@@ -474,13 +482,171 @@ Downloader implementation, ETag handling, source-review documentation, reporting
 
 The Silo uploader dry-run and code-quality checks have also been verified.
 
-Corpus collection, real-corpus duplicate validation, actual corpus upload and final capacity measurements remain pending because source permissions have not yet been confirmed.
+An original project-authored PDF test corpus has been generated and verified. External-source collection, external corpus upload and production-scale capacity measurements remain separate future tasks.
 
-**Day 6 is partially completed; final collection and validation are pending.**
+**Day 6 implementation and original test corpus preparation are completed. External corpus collection remains optional and dependent on source requirements.**
 
-### Day 7 — PDF Parser Comparison
+---
 
-Files compared: 0
+## Day 7 – PDF Parser Comparison
 
-No approved PDF files were available for comparison.
-The real ten-file comparison is pending corpus collection and source permissions.
+### 1. Test Corpus
+
+- Original project-authored PDF test documents generated: 10.
+- Pages per PDF: 2.
+- Total PDF pages: 20.
+- Test corpus location: `data/test_corpus/pdfs/`.
+- Generation script: `scripts/generate_test_pdfs.py`.
+- Comparison script: `scripts/compare_pdf_parsers.py`.
+- CSV comparison report: `data/test_corpus/pdf_parser_comparison.csv`.
+
+The documents contain original illustrative cyclone preparedness and response content, including headings, paragraphs and synthetic planning tables.
+
+They are intended for parser testing, not as official warnings, forecasts, emergency instructions or government publications.
+
+### 2. PyMuPDF Results
+
+- Files successfully parsed: 10/10.
+- Pages extracted: 20.
+- Text characters: 12,969.
+- Headings detected: 50.
+- Tables detected: 10.
+- Total execution time: 1.088600 seconds.
+
+### 3. PyPDF Results
+
+- Files successfully parsed: 10/10.
+- Pages extracted: 20.
+- Text characters: 11,049.
+- Headings detected: 0.
+- Tables detected: 0.
+- Total execution time: 0.271751 seconds.
+
+### 4. Comparison Observations
+
+- Both parsers successfully extracted text from all 10 PDFs.
+- Both parsers extracted all 20 pages.
+- PyMuPDF detected 50 headings and 10 tables.
+- The current PyPDF implementation extracted text but did not detect headings or tables.
+- PyPDF was faster in this particular local test.
+- The timing result is specific to this test corpus and should not be generalized to all PDF documents.
+- PyMuPDF is the more feature-complete option for the current parser requirements because it supports the heading and table extraction implemented in this project.
+
+### 5. Day 7 PDF Comparison Status
+
+- [x] Generated 10 original PDF test documents.
+- [x] Verified that all 10 PDFs contain exactly 2 pages.
+- [x] Verified text extraction.
+- [x] Verified heading extraction.
+- [x] Verified table extraction.
+- [x] Compared PyMuPDF and PyPDF using the same 10 PDFs.
+- [x] Generated the CSV comparison report.
+- [x] Documented the results and limitations.
+
+**PDF parser comparison completed successfully.**
+
+---
+
+## Day 7 – Corpus Parsing and Database Ingestion
+
+### 1. Parser Implementation
+
+- [x] Implemented document parsing and page storage.
+- [x] Added IBTrACS CSV-specific parsing.
+- [x] Extracted cyclone observations into structured database records.
+- [x] Added longitude normalization from the IBTrACS 0–360 convention to the standard -180–180 range.
+- [x] Added validation to reject out-of-range longitude values.
+- [x] Added retry handling for recognized transient database connection failures (retry path not exercised during the successful ingestion run).
+- [x] Preserved atomic document replacement using database transactions.
+- [x] Added PDF table extraction and heading detection using PyMuPDF.
+- [x] Prevented table column labels from being incorrectly classified as document headings.
+
+### 2. IBTrACS Dataset Status
+
+- Manifest-backed input files: 1 CSV.
+- Source dataset: IBTrACS cyclone data.
+- File size: approximately 15.5 MiB.
+- SHA-256: `4f6dbef85c2f1ae30169e35bb2bd47f69a4baa8bb3cf755afd9503bd71bc2c1d`
+- Parsed pages: 5,401.
+- Parsed cyclone observations: 175,595.
+- Parser: `ibtracs_csv`.
+
+### 3. Database Verification
+
+- [x] Reprocessed the CSV successfully in Neon PostgreSQL.
+- [x] Verified 5,401 stored pages.
+- [x] Verified 175,595 observation rows.
+- [x] Verified document metadata observation count: 175,595.
+- [x] Verified minimum longitude: -179.9.
+- [x] Verified maximum longitude: 180.0.
+- [x] Recovered 36 observations previously skipped because their longitudes exceeded 180 degrees.
+
+### 4. Testing and Code Quality
+
+- Parser unit tests at the earlier parser checkpoint: 24 passed.
+- Latest complete unit test run: 69 passed.
+- Latest integration test run: 11 passed.
+- Total latest tests passed: 80.
+- Ruff lint: passed (`uv run ruff check .`).
+- Ruff formatting: passed (`uv run ruff format --check .`).
+- Git diff whitespace check: passed (`git diff --check`).
+- Neon ingestion: 1 file processed, 0 failures.
+- Optional warning: urllib3 reports that PySocks is not installed. This warning did not affect the successful test runs.
+
+### 5. Important Files and Outputs
+
+- `src/cycloneready/ingest/parse.py` – document and dataset parsing.
+- `src/cycloneready/ingest/store.py` – database storage.
+- `scripts/parse_corpus.py` – manifest-based corpus parsing and ingestion.
+- `scripts/generate_test_pdfs.py` – generation of original PDF test documents.
+- `scripts/compare_pdf_parsers.py` – PDF parser comparison.
+- `data/test_corpus/pdfs/` – 10 generated PDF test documents.
+- `data/test_corpus/pdf_parser_comparison.csv` – parser comparison results.
+- `tests/unit/test_parse.py` – parser unit tests.
+- `tests/integration/test_parse_store.py` – parser and storage integration tests.
+
+### 6. Remaining Limitations
+
+- The 10-PDF comparison uses original project-authored illustrative test documents, not a representative collection of official or third-party PDFs.
+- PyPDF currently provides text extraction only in this implementation; heading and table detection are not implemented for that parser.
+- The successful database ingestion run did not exercise the transient connection retry path.
+- Larger external document corpus capacity and embedding-cost measurements remain unverified.
+
+### 7. Day 7 Status
+
+IBTrACS CSV parsing, structured cyclone observation storage, longitude normalization, Neon reprocessing and database verification completed successfully.
+
+The original 10-PDF test corpus was generated, verified and used to compare PyMuPDF and PyPDF. The comparison report was generated successfully.
+
+Latest verification:
+
+- 69 unit tests passed.
+- 11 integration tests passed.
+- Ruff lint passed.
+- Ruff formatting passed.
+- Git diff whitespace check passed.
+
+**Day 7 parser implementation, database ingestion and original PDF parser benchmarking completed successfully.**
+
+---
+
+## Current Project Verification Summary
+
+| Area | Latest status |
+|---|---|
+| PostgreSQL and Neon integration | Verified |
+| Database migrations | Previously applied and verified |
+| FastAPI and production deployment | Previously verified |
+| Docker and Docker Compose | Previously verified |
+| CI/CD | Previously verified |
+| IBTrACS ingestion | 175,595 observations verified |
+| Original PDF test corpus | 10 PDFs, 20 pages |
+| PyMuPDF comparison | 10/10 files successful |
+| PyPDF comparison | 10/10 files successful |
+| Unit tests | 69 passed |
+| Integration tests | 11 passed |
+| Ruff lint | Passed |
+| Ruff formatting | Passed |
+| Git diff whitespace check | Passed |
+
+**Note:** The above records completed work and test evidence. Final Git review, documentation commit and other outstanding delivery tasks should be marked complete only after they have actually been performed.

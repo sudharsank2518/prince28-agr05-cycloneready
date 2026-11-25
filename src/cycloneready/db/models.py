@@ -40,7 +40,6 @@ class Document(Base):
     external_id: Mapped[str] = mapped_column(String(64), unique=True)
     title: Mapped[str] = mapped_column(Text)
 
-    # Promoted from JSONB metadata for faster filtering
     document: Mapped[str | None] = mapped_column(Text, index=True)
 
     source_url: Mapped[str | None] = mapped_column(Text)
@@ -64,9 +63,12 @@ class Document(Base):
         back_populates="document", cascade="all, delete-orphan"
     )
 
+    cyclone_observations: Mapped[list["CycloneObservation"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         Index("ix_documents_doc_type", "doc_type"),
-        # GIN index for faster JSONB metadata searches
         Index(
             "ix_documents_metadata_gin",
             "metadata",
@@ -86,7 +88,6 @@ class Page(Base):
     page_no: Mapped[int]
     text: Mapped[str] = mapped_column(Text)
 
-    # The section path this page starts in, e.g. ["Fever", "Dengue"]: used for citations.
     headings: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
 
     document: Mapped[Document] = relationship(back_populates="pages")
@@ -98,18 +99,78 @@ class Page(Base):
 
 
 class ParseFailure(Base):
-    """The dead-letter table: one row per raw file we could not parse, with the reason."""
+    """One row per raw file that could not be parsed."""
 
     __tablename__ = "parse_failures"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    path: Mapped[str] = mapped_column(Text, unique=True)  # data/raw/<source>/<file>
+    path: Mapped[str] = mapped_column(Text, unique=True)
     sha256: Mapped[str] = mapped_column(String(64))
     source_url: Mapped[str | None] = mapped_column(Text)
-    reason: Mapped[str] = mapped_column(String(40), index=True)  # no_text_layer, corrupt, ...
+    reason: Mapped[str] = mapped_column(String(40), index=True)
     detail: Mapped[str] = mapped_column(Text, server_default="")
     attempts: Mapped[int] = mapped_column(server_default="1")
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CycloneObservation(Base):
+    """One position/intensity observation for a tropical cyclone."""
+
+    __tablename__ = "cyclone_observations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+
+    storm_id: Mapped[str] = mapped_column(String(40), index=True)
+    storm_number: Mapped[int | None]
+
+    basin: Mapped[str | None] = mapped_column(String(80))
+    subbasin: Mapped[str | None] = mapped_column(String(80))
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    nature: Mapped[str | None] = mapped_column(String(80))
+
+    latitude: Mapped[float]
+    longitude: Mapped[float]
+    wind_speed_kt: Mapped[float | None]
+    pressure_mb: Mapped[float | None]
+
+    document: Mapped[Document] = relationship(back_populates="cyclone_observations")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "storm_id",
+            "observed_at",
+            name="uq_cyclone_observations_document_storm_time",
+        ),
+        CheckConstraint(
+            "latitude >= -90 AND latitude <= 90",
+            name="latitude_range",
+        ),
+        CheckConstraint(
+            "longitude >= -180 AND longitude <= 180",
+            name="longitude_range",
+        ),
+        Index(
+            "ix_cyclone_observations_storm_time",
+            "storm_id",
+            "observed_at",
+        ),
+        # Additional indexes for analysis and reporting.
+        Index(
+            "ix_cyclone_observations_basin_year",
+            "basin",
+            "observed_at",
+        ),
+        Index(
+            "ix_cyclone_observations_wind_speed",
+            "wind_speed_kt",
+        ),
     )

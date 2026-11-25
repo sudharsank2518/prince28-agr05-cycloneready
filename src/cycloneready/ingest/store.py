@@ -1,10 +1,15 @@
-"""Store parsed documents, pages, and parsing failures in the database."""
+"""Store parsed documents, pages, cyclone observations, and failures."""
 
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cycloneready.db.models import Document, Page, ParseFailure
+from cycloneready.db.models import (
+    CycloneObservation,
+    Document,
+    Page,
+    ParseFailure,
+)
 from cycloneready.ingest.parse import ParsedDoc
 
 
@@ -35,7 +40,8 @@ async def save_document(
     licence: str | None,
     parsed: ParsedDoc,
 ) -> Document:
-    """Save a parsed document and all its pages."""
+    """Save a parsed document, its pages, and its cyclone observations."""
+
     external_id = document_id(sha256)
 
     document = await session.scalar(select(Document).where(Document.external_id == external_id))
@@ -52,24 +58,38 @@ async def save_document(
                 "parser": parsed.parser,
                 "pages": len(parsed.pages),
                 "tables": sum(page.tables for page in parsed.pages),
+                "observations": len(parsed.observations),
                 "path": path,
             },
         )
+
         session.add(document)
         await session.flush()
+
     else:
         document.title = parsed.title
         document.source_url = source_url
         document.licence = licence
         document.doc_type = parsed.kind
+        document.sha256 = sha256
+
         document.metadata_ = {
             "parser": parsed.parser,
             "pages": len(parsed.pages),
             "tables": sum(page.tables for page in parsed.pages),
+            "observations": len(parsed.observations),
             "path": path,
         }
+
+        # Remove old pages before inserting updated pages.
         await session.execute(delete(Page).where(Page.document_id == document.id))
 
+        # Remove old cyclone observations before reprocessing.
+        await session.execute(
+            delete(CycloneObservation).where(CycloneObservation.document_id == document.id)
+        )
+
+    # Save parsed document pages.
     for page in parsed.pages:
         session.add(
             Page(
@@ -80,9 +100,45 @@ async def save_document(
             )
         )
 
+    # Save cyclone observations in batches.
+    if parsed.observations:
+        batch_size = 1000
+        total = len(parsed.observations)
+
+        for start in range(0, total, batch_size):
+            batch = parsed.observations[start : start + batch_size]
+
+            observation_rows = [
+                {
+                    "document_id": document.id,
+                    "storm_id": observation.storm_id,
+                    "storm_number": observation.storm_number,
+                    "basin": observation.basin,
+                    "subbasin": observation.subbasin,
+                    "observed_at": observation.observed_at,
+                    "nature": observation.nature,
+                    "latitude": observation.latitude,
+                    "longitude": observation.longitude,
+                    "wind_speed_kt": observation.wind_speed_kt,
+                    "pressure_mb": observation.pressure_mb,
+                }
+                for observation in batch
+            ]
+
+            await session.execute(
+                insert(CycloneObservation),
+                observation_rows,
+            )
+
+            inserted = min(start + batch_size, total)
+
+            print(f"Inserted observations: {inserted}/{total}")
+
+    # Remove the previous failure record after successful parsing.
     await session.execute(delete(ParseFailure).where(ParseFailure.path == path))
 
     await session.flush()
+
     return document
 
 
@@ -95,6 +151,7 @@ async def save_failure(
     detail: str = "",
 ) -> None:
     """Insert a failure or update its details and increment its attempts."""
+
     statement = insert(ParseFailure).values(
         path=path,
         sha256=sha256,

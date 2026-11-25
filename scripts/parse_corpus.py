@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+from sqlalchemy.exc import DBAPIError
+
 ROOT = Path(__file__).resolve().parents[1]
 
 if str(ROOT / "src") not in sys.path:
@@ -62,7 +64,30 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-async def process_corpus(limit: int | None, retry_failed: bool) -> None:
+def is_transient_connection_error(error: DBAPIError) -> bool:
+    """Check whether a database error looks like a temporary connection failure."""
+    if error.connection_invalidated:
+        return True
+
+    message = str(error).lower()
+
+    connection_errors = (
+        "connection was closed",
+        "connection closed",
+        "connection reset",
+        "connection terminated",
+        "server closed the connection",
+        "connection is closed",
+    )
+
+    return any(text in message for text in connection_errors)
+
+
+async def process_corpus(
+    limit: int | None,
+    retry_failed: bool,
+    reprocess: bool,
+) -> None:
     records = read_manifest()
 
     records = [
@@ -81,55 +106,41 @@ async def process_corpus(limit: int | None, retry_failed: bool) -> None:
     processed = 0
     failed = 0
     skipped = 0
+    total_observations = 0
 
     try:
         async with sessionmaker() as session:
             existing_ids = await parsed_ids(session)
             existing_failures = await failed_paths(session)
 
-            for record in records:
-                path = ROOT / record["file_path"]
+        for record in records:
+            path = ROOT / record["file_path"]
 
-                if not path.is_file():
-                    print(f"Missing file: {path}")
-                    skipped += 1
-                    continue
+            if not path.is_file():
+                print(f"Missing file: {path}")
+                skipped += 1
+                continue
 
-                relative_path = str(path.relative_to(ROOT))
+            relative_path = str(path.relative_to(ROOT))
 
-                if relative_path in existing_failures and not retry_failed:
-                    print(f"Already failed; skipping: {relative_path}")
-                    skipped += 1
-                    continue
+            if relative_path in existing_failures and not retry_failed:
+                print(f"Already failed; skipping: {relative_path}")
+                skipped += 1
+                continue
 
-                sha256 = record.get("sha256") or file_sha256(path)
-                external_id = f"f-{sha256[:20]}"
+            sha256 = record.get("sha256") or file_sha256(path)
+            external_id = f"f-{sha256[:20]}"
 
-                if external_id in existing_ids:
-                    print(f"Already parsed; skipping: {relative_path}")
-                    skipped += 1
-                    continue
+            if external_id in existing_ids and not reprocess:
+                print(f"Already parsed; skipping: {relative_path}")
+                skipped += 1
+                continue
 
-                try:
-                    parsed = parse_file(path)
-
-                    await save_document(
-                        session=session,
-                        path=relative_path,
-                        sha256=sha256,
-                        source_url=record.get("url"),
-                        licence=record.get("licence"),
-                        parsed=parsed,
-                    )
-
-                    await session.commit()
-                    existing_ids.add(external_id)
-                    existing_failures.discard(relative_path)
-                    processed += 1
-
-                    print(f"Parsed: {relative_path}")
-
-                except ParseError as error:
+            # Parse the file once. Parsing errors are not retried.
+            try:
+                parsed = parse_file(path)
+            except ParseError as error:
+                async with sessionmaker() as session:
                     await save_failure(
                         session=session,
                         path=relative_path,
@@ -139,32 +150,95 @@ async def process_corpus(limit: int | None, retry_failed: bool) -> None:
                         detail=error.detail,
                     )
                     await session.commit()
-                    failed += 1
 
-                    print(f"Failed: {relative_path} ({error.reason})")
+                failed += 1
+                print(f"Failed: {relative_path} ({error.reason})")
+                continue
+
+            # Retry database connection failures using a fresh session.
+            max_attempts = 3
+            saved = False
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    async with sessionmaker() as session:
+                        await save_document(
+                            session=session,
+                            path=relative_path,
+                            sha256=sha256,
+                            source_url=record.get("url"),
+                            licence=record.get("licence"),
+                            parsed=parsed,
+                        )
+
+                        await session.commit()
+
+                    saved = True
+                    break
+
+                except DBAPIError as error:
+                    if is_transient_connection_error(error) and attempt < max_attempts:
+                        delay = 2**attempt
+                        print(
+                            f"Temporary database connection error for "
+                            f"{relative_path}. "
+                            f"Retrying ({attempt + 1}/{max_attempts}) "
+                            f"in {delay} seconds..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        print(
+                            f"Database error for {relative_path} "
+                            f"(attempt {attempt}/{max_attempts}): {error}"
+                        )
+                        break
 
                 except Exception as error:
-                    await session.rollback()
-                    failed += 1
                     print(f"Unexpected error: {relative_path}: {error}")
+                    break
+
+            if saved:
+                existing_ids.add(external_id)
+                existing_failures.discard(relative_path)
+
+                processed += 1
+                observation_count = len(parsed.observations)
+                total_observations += observation_count
+
+                print(f"Parsed: {relative_path} ({observation_count} cyclone observations)")
+            else:
+                failed += 1
 
     finally:
         await engine.dispose()
 
     print("\nParsing summary")
-    print(f"Processed: {processed}")
-    print(f"Failed:    {failed}")
-    print(f"Skipped:   {skipped}")
-    print(f"Total:     {len(records)}")
+    print(f"Processed:            {processed}")
+    print(f"Cyclone observations: {total_observations}")
+    print(f"Failed:               {failed}")
+    print(f"Skipped:              {skipped}")
+    print(f"Total:                {len(records)}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Parse downloaded corpus files into the database.")
-    parser.add_argument("--limit", type=int, help="Maximum number of files to parse.")
+
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Maximum number of files to parse.",
+    )
+
     parser.add_argument(
         "--retry-failed",
         action="store_true",
         help="Retry files that previously failed parsing.",
+    )
+
+    parser.add_argument(
+        "--reprocess",
+        action="store_true",
+        help="Reprocess files even if they were already parsed.",
     )
 
     args = parser.parse_args()
@@ -172,7 +246,13 @@ def main() -> None:
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be at least 1")
 
-    asyncio.run(process_corpus(args.limit, args.retry_failed))
+    asyncio.run(
+        process_corpus(
+            args.limit,
+            args.retry_failed,
+            args.reprocess,
+        )
+    )
 
 
 if __name__ == "__main__":

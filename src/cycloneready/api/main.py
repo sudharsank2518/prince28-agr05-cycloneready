@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI
 
 from cycloneready.api.errors import register_error_handlers
 from cycloneready.api.middleware import request_context
-from cycloneready.api.routes import documents, health
+from cycloneready.api.routes import cyclones, documents, health
 from cycloneready.config import Settings, get_settings
 from cycloneready.db.session import make_engine, make_sessionmaker
 from cycloneready.logging_setup import setup_logging
@@ -24,7 +24,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-
         try:
             yield
         finally:
@@ -45,6 +44,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     v1 = APIRouter(prefix="/v1")
     v1.include_router(documents.router)
+    v1.include_router(cyclones.router)
 
     app.include_router(health.router)
     app.include_router(v1)
