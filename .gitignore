@@ -17,3 +17,6 @@ data/raw/
 .coverage
 htmlcov/
 data/sample_records_backup.json
+
+# LLM evaluation cache (do not commit results)
+eval/cache/

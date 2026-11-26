@@ -19,6 +19,7 @@ class DocumentRepository:
         filters: dict[str, str] | None = None,
         limit: int = 20,
         offset: int = 0,
+        sort: str | None = None,
     ) -> tuple[int, list[dict]]:
         """List documents with typed-column and JSONB metadata filters."""
 
@@ -51,7 +52,24 @@ class DocumentRepository:
         total_result = await self.session.execute(count_statement)
         total = total_result.scalar_one()
 
-        statement = statement.order_by(Document.id).limit(limit).offset(offset)
+        sort_columns = {
+            "title": Document.title,
+            "published_on": Document.published_on,
+        }
+
+        if sort:
+            descending = sort.startswith("-")
+            field = sort[1:] if descending else sort
+
+            if field not in sort_columns:
+                raise ValueError("Invalid sort field")
+
+            column = sort_columns[field]
+            statement = statement.order_by(column.desc() if descending else column.asc())
+        else:
+            statement = statement.order_by(Document.id)
+
+        statement = statement.limit(limit).offset(offset)
 
         result = await self.session.execute(statement)
         documents = result.scalars().all()
@@ -60,6 +78,12 @@ class DocumentRepository:
             {
                 "id": document.external_id,
                 "title": document.title,
+                "source_url": document.source_url,
+                "licence": document.licence,
+                "doc_type": document.doc_type,
+                "published_on": (
+                    document.published_on.isoformat() if document.published_on else None
+                ),
                 **document.metadata_,
                 "document": document.document,
             }
@@ -86,7 +110,6 @@ class DocumentRepository:
             statement = statement.where(condition)
             count_statement = count_statement.where(condition)
 
-        # Filter using the indexed typed document column.
         if document:
             condition = Document.document == document
             statement = statement.where(condition)
