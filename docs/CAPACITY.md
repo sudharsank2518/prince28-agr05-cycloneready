@@ -2,14 +2,14 @@
 
 ## Current measured corpus
 
-- Collected files: 1
-- PDF pages: 0
-- Approximate extracted text tokens: 4,023,002
-- Approximate 500-token chunks: 8,047
-- Measured PDF tokens per page: Not applicable (no PDF sample pages measured)
-- Current disk usage: 15.51 MB
+- Collected files: 5
+- PDF pages: 450
+- Approximate extracted text tokens: 4,248,770
+- Approximate 500-token chunks: 8,498
+- Measured PDF tokens per page: 501.71
+- Current disk usage: 66.56 MB
 
-The current corpus contains historical cyclone data. Token counts are approximate character-based estimates, not exact tokenizer results.
+The current corpus contains historical cyclone data and disaster-management reference documents. Token counts are approximate character-based estimates, not exact tokenizer results.
 
 ## Planned project knowledge
 

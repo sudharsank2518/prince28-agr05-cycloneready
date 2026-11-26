@@ -16,3 +16,4 @@ data/raw/
 .DS_Store
 .coverage
 htmlcov/
+data/sample_records_backup.json
