@@ -340,7 +340,11 @@ def generate_dataset_report(stats):
         "together with an original CycloneReady solution document developed "
         "by the project team.",
         "",
-        "The project does not depend on collecting or reproducing government guideline PDFs.",
+        "The collected corpus includes historical cyclone data and "
+        "disaster-management guidance documents.",
+        "The reuse of each document is subject to its source-specific "
+        "licence or terms. The project does not assume unrestricted "
+        "reproduction or redistribution.",
         "",
         f"- Collector User-Agent: `{USER_AGENT}`",
         "",
@@ -467,7 +471,8 @@ def generate_dataset_report(stats):
             "- IBTrACS does not independently validate every preparedness "
             "or response recommendation.",
             "- Missing wind-speed and pressure values must remain unknown, not be treated as zero.",
-            "- No PDF pages are currently included in the collected dataset.",
+            "- The collected dataset includes 450 PDF pages across four PDF documents.",
+            "- Thirteen PDF pages are scanned or text-empty and may require OCR.",
             "- Urban flood-specific historical datasets may be added after "
             "their sources and licences are reviewed.",
             "- Unknown file formats are not included in extracted text estimates.",
@@ -503,7 +508,8 @@ def generate_capacity_report(stats):
         f"- Measured PDF tokens per page: {measured_tokens_text}",
         f"- Current disk usage: {format_mb(stats['bytes']):.2f} MB",
         "",
-        "The current corpus contains historical cyclone data. Token counts "
+        "The current corpus contains historical cyclone data and "
+        "disaster-management reference documents. Token counts "
         "are approximate character-based estimates, not exact tokenizer results.",
         "",
         "## Planned project knowledge",
