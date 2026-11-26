@@ -356,6 +356,7 @@ class FakeLLMProvider:
         self.response = response
         self.should_fail = should_fail
         self.calls = 0
+        self.response_formats: list[dict[str, Any] | None] = []
 
     async def generate(
         self,
@@ -366,6 +367,7 @@ class FakeLLMProvider:
         response_format: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         self.calls += 1
+        self.response_formats.append(response_format)
         if self.should_fail:
             raise ProviderError(f"{self.name} simulated failure")
         return ProviderResponse(

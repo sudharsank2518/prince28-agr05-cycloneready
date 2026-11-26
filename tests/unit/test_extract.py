@@ -10,6 +10,7 @@ from cycloneready.llm.extract import (
     ExtractionError,
     build_messages,
     extract_metadata,
+    metadata_response_format,
 )
 from cycloneready.llm.gateway import FakeLLMProvider, LLMGateway
 
@@ -58,7 +59,7 @@ def test_extract_metadata_returns_validated_metadata():
             gateway,
             "Extract document metadata.",
             "v1",
-            "Cyclone preparedness guide.",
+            "Cyclone preparedness guide published in 2024.",
         )
     )
 
@@ -68,6 +69,26 @@ def test_extract_metadata_returns_validated_metadata():
     assert metadata.hazard == ["cyclone"]
     assert result.text == json.dumps(VALID_METADATA)
     assert primary.calls == 1
+    assert primary.response_formats == [metadata_response_format()]
+
+
+def test_metadata_response_format_is_strict_and_requires_all_fields():
+    response_format = metadata_response_format()
+
+    assert response_format["type"] == "json_schema"
+
+    json_schema = response_format["json_schema"]
+    assert json_schema["strict"] is True
+
+    schema = json_schema["schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(schema["properties"])
+
+    year_schema = schema["properties"]["year"]
+    assert year_schema["anyOf"] == [
+        {"type": "integer"},
+        {"type": "null"},
+    ]
 
 
 def test_extract_metadata_rejects_invalid_json():
@@ -120,3 +141,23 @@ def test_extract_metadata_rejects_empty_document():
         )
 
     assert primary.calls == 0
+
+
+def test_extract_metadata_rejects_year_not_present_in_document():
+    invented_metadata = {
+        **VALID_METADATA,
+        "year": 2025,
+    }
+    gateway, primary = make_gateway(json.dumps(invented_metadata))
+
+    with pytest.raises(ExtractionError, match="does not appear in the source document"):
+        asyncio.run(
+            extract_metadata(
+                gateway,
+                "Extract document metadata.",
+                "v1",
+                "Cyclone preparedness guide published in 2024.",
+            )
+        )
+
+    assert primary.calls == 1

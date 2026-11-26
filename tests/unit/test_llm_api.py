@@ -4,25 +4,38 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 
-def make_mock_gateway():
+def make_mock_gateway(classification="docs"):
     """Create a gateway mock without making real provider calls."""
 
     gateway = SimpleNamespace()
     gateway.system_prompt = "You are CycloneReady."
 
-    gateway.generate = AsyncMock(
-        return_value=SimpleNamespace(
-            content="Stay safe during a cyclone.",
-            provider="gemini",
-            model="gemini-3.5-flash-lite",
-            request_id="test-request-123",
-            input_tokens=10,
-            output_tokens=8,
-            latency_ms=150,
-            fallback_used=False,
-            cost_inr=0.001,
-        )
+    classifier_result = SimpleNamespace(
+        content=classification,
+        text=classification,
+        provider="gemini",
+        model="gemini-3.5-flash-lite",
+        request_id="classifier-request",
+        input_tokens=5,
+        output_tokens=1,
+        latency_ms=50,
+        fallback_used=False,
+        cost_inr=0.001,
     )
+
+    chat_result = SimpleNamespace(
+        content="Stay safe during a cyclone.",
+        provider="gemini",
+        model="gemini-3.5-flash-lite",
+        request_id="test-request-123",
+        input_tokens=10,
+        output_tokens=8,
+        latency_ms=150,
+        fallback_used=False,
+        cost_inr=0.001,
+    )
+
+    gateway.generate = AsyncMock(side_effect=[classifier_result, chat_result])
 
     async def stream(messages, **kwargs):
         yield {
@@ -126,3 +139,31 @@ def test_llm_status_reports_provider_circuits(client):
     assert body["fallback"]["provider"] == "groq"
     assert body["primary"]["circuit"] in {"closed", "open", "half_open"}
     assert body["fallback"]["circuit"] in {"closed", "open", "half_open"}
+
+
+def test_chat_personal_question_uses_fixed_answer_without_second_llm_call(client):
+    gateway = make_mock_gateway(classification="personal")
+    client.app.state.llm_gateway = gateway
+
+    response = client.post(
+        "/v1/chat",
+        json={"messages": [{"role": "user", "content": "Is there a cyclone warning near me?"}]},
+    )
+
+    assert response.status_code == 200
+    assert "can't verify live conditions" in response.json()["answer"]
+    assert gateway.generate.await_count == 1
+
+
+def test_chat_off_topic_question_uses_fixed_answer_without_second_llm_call(client):
+    gateway = make_mock_gateway(classification="off_topic")
+    client.app.state.llm_gateway = gateway
+
+    response = client.post(
+        "/v1/chat",
+        json={"messages": [{"role": "user", "content": "Who won the cricket match?"}]},
+    )
+
+    assert response.status_code == 200
+    assert "I'm CycloneReady" in response.json()["answer"]
+    assert gateway.generate.await_count == 1
