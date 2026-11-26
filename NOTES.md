@@ -800,6 +800,36 @@ Remaining work includes final Docker and integration verification, checking Olla
 | v3 | 20 | 20 | 100.0% | 0 |
 | v4 | 20 | 20 | 100.0% | 0 |
 
+#### Per-label confusion tables
+
+**v1**
+| Actual \ Predicted | docs | off_topic | personal | invalid |
+|---|---:|---:|---:|---:|
+| docs | 8 | 0 | 1 | 0 |
+| off_topic | 3 | 2 | 0 | 0 |
+| personal | 0 | 3 | 3 | 0 |
+
+**v2**
+| Actual \ Predicted | docs | off_topic | personal | invalid |
+|---|---:|---:|---:|---:|
+| docs | 9 | 0 | 0 | 0 |
+| off_topic | 0 | 5 | 0 | 0 |
+| personal | 0 | 0 | 6 | 0 |
+
+**v3**
+| Actual \ Predicted | docs | off_topic | personal | invalid |
+|---|---:|---:|---:|---:|
+| docs | 9 | 0 | 0 | 0 |
+| off_topic | 0 | 5 | 0 | 0 |
+| personal | 0 | 0 | 6 | 0 |
+
+**v4**
+| Actual \ Predicted | docs | off_topic | personal | invalid |
+|---|---:|---:|---:|---:|
+| docs | 9 | 0 | 0 | 0 |
+| off_topic | 0 | 5 | 0 | 0 |
+| personal | 0 | 0 | 6 | 0 |
+
 #### Incorrect predictions
 
 **v1**
@@ -822,3 +852,38 @@ Remaining work includes final Docker and integration verification, checking Olla
 
 Failed API calls are not included in accuracy. Rerun the script to retry missing evaluations.
 <!-- PROMPT COMPARISON END -->
+
+## Day 9 — Prompt routing and document metadata
+
+### Completed tasks
+
+- Implemented a question classifier that routes questions into `docs`, `personal`, and `off_topic`.
+- Created and evaluated four classification prompt versions (`v1`–`v4`) using a 20-question test set.
+- Integrated the question router into the `/v1/chat` endpoint.
+- Added validated structured document metadata extraction using the `DocMeta` Pydantic model.
+- Added strict JSON Schema response formatting for metadata extraction.
+- Added validation to reject extracted years that do not appear in the source document.
+- Added metadata filtering support to the document API.
+- Added per-label confusion tables to the prompt comparison report.
+- Added regression tests for routing, metadata extraction, strict schema handling, and confusion-table generation.
+
+### Prompt evaluation
+
+- v1: 13/20 correct (65%)
+- v2: 20/20 correct (100%)
+- v3: 20/20 correct (100%)
+- v4: 20/20 correct (100%)
+
+The full confusion tables and incorrect predictions are documented in the Prompt comparison results section above.
+
+### Validation
+
+- `uv run poe lint` — passed.
+- `uv run poe test` — 111 tests passed.
+- GitHub CI build, lint, and test checks — passed.
+- Stretch-task changes merged into `main` through PR #33.
+- Final stretch-task commit: `5222c2d`.
+
+### Day 9 status
+
+All MUST tasks and all four stretch tasks completed.
