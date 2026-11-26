@@ -112,6 +112,25 @@ def show_check(rows: list[dict[str, str]], prompts: dict[str, str]) -> None:
     print("\nCheck passed. No API calls were made.")
 
 
+def confusion_table(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Count predictions grouped by actual and predicted labels."""
+    predicted_labels = sorted(VALID_LABELS) + ["invalid"]
+    table = {
+        label: {predicted: 0 for predicted in predicted_labels} for label in sorted(VALID_LABELS)
+    }
+
+    for row in rows:
+        actual = row.get("label")
+        predicted = row.get("got")
+
+        if actual not in VALID_LABELS or predicted not in predicted_labels:
+            continue
+
+        table[actual][predicted] += 1
+
+    return table
+
+
 def update_notes(results: dict[str, list[dict[str, Any]]]) -> None:
     """Replace only the generated comparison section in NOTES.md."""
     lines = [
@@ -129,7 +148,22 @@ def update_notes(results: dict[str, list[dict[str, Any]]]) -> None:
         score = accuracy(evaluated)
         lines.append(f"| v{version} | {correct} | {len(evaluated)} | {score:.1%} | {incorrect} |")
 
-    lines.extend(["", "#### Incorrect predictions", ""])
+    lines.extend(["", "#### Per-label confusion tables", ""])
+    predicted_labels = sorted(VALID_LABELS) + ["invalid"]
+
+    for version, rows in results.items():
+        table = confusion_table(rows)
+        lines.append(f"**v{version}**")
+        lines.append("| Actual \\ Predicted | " + " | ".join(predicted_labels) + " |")
+        lines.append("|---|" + "---:|" * len(predicted_labels))
+
+        for actual in sorted(VALID_LABELS):
+            counts = [str(table[actual][predicted]) for predicted in predicted_labels]
+            lines.append(f"| {actual} | " + " | ".join(counts) + " |")
+
+        lines.append("")
+
+    lines.extend(["#### Incorrect predictions", ""])
 
     for version, rows in results.items():
         misses = [
