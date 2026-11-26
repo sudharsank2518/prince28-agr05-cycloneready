@@ -13,19 +13,37 @@ async def list_documents(
     session: DbSessionDep,
     q: Annotated[str | None, Query(max_length=200)] = None,
     document: Annotated[str | None, Query()] = None,
+    doc_kind: Annotated[str | None, Query()] = None,
+    year: Annotated[str | None, Query()] = None,
+    hazard: Annotated[str | None, Query()] = None,
+    phase: Annotated[str | None, Query()] = None,
+    language: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
     sort: Annotated[str | None, Query()] = None,
 ) -> dict:
     repository = DocumentRepository(session)
 
+    filters = {
+        key: value
+        for key, value in {
+            "document": document,
+            "doc_kind": doc_kind,
+            "year": year,
+            "hazard": hazard,
+            "phase": phase,
+            "language": language,
+        }.items()
+        if value is not None
+    }
+
     try:
-        rows, total = await repository.search(
-            query=q,
+        total, rows = await repository.list(
+            q=q,
+            filters=filters or None,
             limit=limit,
             offset=offset,
             sort=sort,
-            document=document,
         )
     except ValueError as exc:
         raise HTTPException(

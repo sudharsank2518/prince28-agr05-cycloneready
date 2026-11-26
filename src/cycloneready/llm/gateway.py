@@ -14,7 +14,6 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# USD per 1 million tokens: (input price, output price).
 PRICES_USD = {
     "gemini-3.8-flash": (0.75, 3.75),
     "gemini-3.5-flash-lite": (0.30, 2.50),
@@ -52,6 +51,19 @@ class ProviderResponse:
     model: str
     input_tokens: int | None = None
     output_tokens: int | None = None
+    provider: str = "unknown"
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+    def __post_init__(self):
+        if self.input_tokens is None:
+            self.input_tokens = self.prompt_tokens
+        if self.output_tokens is None:
+            self.output_tokens = self.completion_tokens
+        if self.prompt_tokens is None:
+            self.prompt_tokens = self.input_tokens
+        if self.completion_tokens is None:
+            self.completion_tokens = self.output_tokens
 
 
 @dataclass
@@ -70,12 +82,32 @@ class GatewayResponse:
     content: str
     provider: str
     model: str
-    request_id: str
-    input_tokens: int | None
-    output_tokens: int | None
-    latency_ms: int
-    fallback_used: bool
-    cost_inr: float
+    request_id: str = ""
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    latency_ms: int = 0
+    fallback_used: bool = False
+    cost_inr: float = 0.0
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+
+    def __post_init__(self):
+        if self.input_tokens is None:
+            self.input_tokens = self.prompt_tokens
+        if self.output_tokens is None:
+            self.output_tokens = self.completion_tokens
+        if self.prompt_tokens is None:
+            self.prompt_tokens = self.input_tokens
+        if self.completion_tokens is None:
+            self.completion_tokens = self.output_tokens
+
+    @property
+    def text(self) -> str:
+        """Return response content using the Day 9 classifier interface."""
+        return self.content
+
+
+LLMResult = GatewayResponse
 
 
 def parse_retry_after(value: str | None) -> float | None:
@@ -91,38 +123,27 @@ def parse_retry_after(value: str | None) -> float | None:
 
     try:
         retry_date = parsedate_to_datetime(value)
-
         if retry_date.tzinfo is None:
             retry_date = retry_date.replace(tzinfo=UTC)
-
-        seconds = (retry_date - datetime.now(UTC)).total_seconds()
-
-        return max(0.0, seconds)
+        return max(0.0, (retry_date - datetime.now(UTC)).total_seconds())
     except (TypeError, ValueError, OverflowError):
         return None
 
 
 def estimate_tokens(text: str) -> int:
     """Estimate tokens using approximately four characters per token."""
-
     if not text:
         return 0
-
     return (len(text) + 3) // 4
 
 
-def estimate_messages_tokens(
-    messages: list[dict[str, str]],
-) -> int:
+def estimate_messages_tokens(messages: list[dict[str, str]]) -> int:
     """Estimate tokens in a chat message list."""
-
     total = 0
-
     for message in messages:
         total += estimate_tokens(message.get("role", ""))
         total += estimate_tokens(message.get("content", ""))
         total += 3
-
     return total
 
 
@@ -133,9 +154,7 @@ def cost_inr(
     usd_inr: float,
 ) -> float:
     """Calculate estimated cost in INR using the model price table."""
-
     price_in, price_out = PRICES_USD.get(model, (0.0, 0.0))
-
     return round(
         (tokens_in * price_in + tokens_out * price_out) / 1_000_000 * usd_inr,
         6,
@@ -151,11 +170,8 @@ def calculate_cost_inr(
     usd_to_inr: float,
 ) -> float:
     """Calculate estimated LLM cost in INR."""
-
     input_cost = ((input_tokens or 0) / 1_000_000) * input_price_per_million
-
     output_cost = ((output_tokens or 0) / 1_000_000) * output_price_per_million
-
     return (input_cost + output_cost) * usd_to_inr
 
 
@@ -180,18 +196,12 @@ class OpenAICompatibleProvider:
         self.require_api_key = require_api_key
 
     def _headers(self) -> dict[str, str]:
-        """Build request headers."""
-
         headers = {"Content-Type": "application/json"}
-
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-
         return headers
 
     def _check_api_key(self) -> None:
-        """Check whether the provider requires an API key."""
-
         if self.require_api_key and not self.api_key:
             raise ProviderError(f"{self.name} API key is not configured")
 
@@ -201,11 +211,11 @@ class OpenAICompatibleProvider:
         *,
         temperature: float = 0.2,
         max_tokens: int = 1000,
+        response_format: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         """Send messages and return the provider's response."""
 
         self._check_api_key()
-
         url = f"{self.base_url}/chat/completions"
         payload: dict[str, Any] = {
             "model": self.model,
@@ -213,6 +223,8 @@ class OpenAICompatibleProvider:
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        if response_format is not None:
+            payload["response_format"] = response_format
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -240,19 +252,17 @@ class OpenAICompatibleProvider:
 
         try:
             content = data["choices"][0]["message"]["content"]
-
             if not isinstance(content, str):
                 raise TypeError("Response content is not text")
 
             usage = data.get("usage") or {}
-
             return ProviderResponse(
                 content=content,
                 model=data.get("model", self.model),
+                provider=self.name,
                 input_tokens=usage.get("prompt_tokens"),
                 output_tokens=usage.get("completion_tokens"),
             )
-
         except (KeyError, IndexError, TypeError) as exc:
             raise ProviderError(f"{self.name} returned an unexpected response format") from exc
 
@@ -266,7 +276,6 @@ class OpenAICompatibleProvider:
         """Stream response chunks from an OpenAI-compatible provider."""
 
         self._check_api_key()
-
         url = f"{self.base_url}/chat/completions"
         payload: dict[str, Any] = {
             "model": self.model,
@@ -288,13 +297,11 @@ class OpenAICompatibleProvider:
                 ) as response,
             ):
                 response.raise_for_status()
-
                 async for line in response.aiter_lines():
                     if not line.startswith("data:"):
                         continue
 
                     data_text = line.removeprefix("data:").strip()
-
                     if data_text == "[DONE]":
                         break
 
@@ -306,7 +313,6 @@ class OpenAICompatibleProvider:
                     usage = data.get("usage") or {}
                     choices = data.get("choices") or []
                     content = ""
-
                     if choices:
                         delta = choices[0].get("delta") or {}
                         content = delta.get("content") or ""
@@ -357,17 +363,15 @@ class FakeLLMProvider:
         *,
         temperature: float = 0.2,
         max_tokens: int = 1000,
+        response_format: dict[str, Any] | None = None,
     ) -> ProviderResponse:
-        """Return a fake response or simulate a provider failure."""
-
         self.calls += 1
-
         if self.should_fail:
             raise ProviderError(f"{self.name} simulated failure")
-
         return ProviderResponse(
             content=self.response,
             model=self.model,
+            provider=self.name,
             input_tokens=10,
             output_tokens=20,
         )
@@ -379,22 +383,13 @@ class FakeLLMProvider:
         temperature: float = 0.2,
         max_tokens: int = 1000,
     ):
-        """Simulate streaming by returning the response in chunks."""
-
         self.calls += 1
-
         if self.should_fail:
             raise ProviderError(f"{self.name} simulated failure")
 
-        chunk_size = 5
-
-        for start in range(0, len(self.response), chunk_size):
-            yield ProviderStreamEvent(content=self.response[start : start + chunk_size])
-
-        yield ProviderStreamEvent(
-            input_tokens=10,
-            output_tokens=20,
-        )
+        for start in range(0, len(self.response), 5):
+            yield ProviderStreamEvent(content=self.response[start : start + 5])
+        yield ProviderStreamEvent(input_tokens=10, output_tokens=20)
 
 
 class CircuitBreaker:
@@ -413,36 +408,27 @@ class CircuitBreaker:
         self.opened_at: float | None = None
 
     def allow_request(self) -> bool:
-        """Check whether a request can be sent."""
-
         if self.state == "closed":
             return True
 
         if self.state == "open":
             if self.opened_at is not None:
                 elapsed = time.monotonic() - self.opened_at
-
                 if elapsed >= self.recovery_timeout:
-                    self.state = "half-open"
+                    self.state = "half_open"
                     return True
-
             return False
 
         return False
 
     def record_success(self) -> None:
-        """Reset the breaker after a successful request."""
-
         self.failure_count = 0
         self.state = "closed"
         self.opened_at = None
 
     def record_failure(self) -> None:
-        """Count a failure and open the breaker when necessary."""
-
         self.failure_count += 1
-
-        if self.state == "half-open" or self.failure_count >= self.failure_threshold:
+        if self.state == "half_open" or self.failure_count >= self.failure_threshold:
             self.state = "open"
             self.opened_at = time.monotonic()
 
@@ -462,10 +448,18 @@ class LLMGateway:
         recovery_timeout: float = 30.0,
         usd_to_inr: float = 95.0,
         recorder: Any | None = None,
+        max_retries: int | None = None,
+        retry_delay: float | None = None,
     ):
         self.primary = primary
         self.fallback = fallback
         self.tertiary = tertiary
+
+        if max_retries is not None:
+            retry_attempts = max_retries + 1
+        if retry_delay is not None:
+            retry_delay_seconds = retry_delay
+
         self.retry_attempts = max(1, retry_attempts)
         self.retry_delay_seconds = retry_delay_seconds
         self.usd_to_inr = usd_to_inr
@@ -473,7 +467,6 @@ class LLMGateway:
         self.system_prompt = ""
 
         providers = [primary, fallback]
-
         if tertiary is not None:
             providers.append(tertiary)
 
@@ -484,7 +477,6 @@ class LLMGateway:
             )
             for provider in providers
         }
-
         self.primary_breaker = self.breakers[primary.name]
         self.fallback_breaker = self.breakers[fallback.name]
         self.tertiary_breaker = self.breakers[tertiary.name] if tertiary is not None else None
@@ -502,6 +494,8 @@ class LLMGateway:
         fallback_used: bool = False,
         model: str | None = None,
         cost: float | None = None,
+        purpose: str = "chat",
+        prompt_version: str = "v1",
     ) -> None:
         """Record one provider attempt without interrupting the request."""
 
@@ -513,8 +507,8 @@ class LLMGateway:
                 request_id=request_id,
                 provider=provider.name,
                 model=model or provider.model,
-                purpose="chat",
-                prompt_version="v1",
+                purpose=purpose,
+                prompt_version=prompt_version,
                 status=status,
                 error=error,
                 input_tokens=input_tokens,
@@ -545,6 +539,7 @@ class LLMGateway:
         *,
         temperature: float,
         max_tokens: int,
+        response_format: dict[str, Any] | None = None,
     ) -> ProviderResponse:
         """Retry retryable provider errors before reporting failure."""
 
@@ -552,15 +547,20 @@ class LLMGateway:
 
         for attempt in range(self.retry_attempts):
             try:
+                if response_format is None:
+                    return await provider.generate(
+                        messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
                 return await provider.generate(
                     messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    response_format=response_format,
                 )
-
             except ProviderError as exc:
                 last_error = exc
-
                 if exc.status_code is not None and exc.status_code not in RETRYABLE_STATUS_CODES:
                     raise
 
@@ -574,21 +574,17 @@ class LLMGateway:
 
         raise ProviderError(
             f"{provider.name} failed after {self.retry_attempts} attempts: {last_error}",
-            status_code=(last_error.status_code if last_error else None),
-            retry_after=(last_error.retry_after if last_error else None),
+            status_code=last_error.status_code if last_error else None,
+            retry_after=last_error.retry_after if last_error else None,
         ) from last_error
 
     def _provider_sequence(self) -> list[tuple[Any, CircuitBreaker, bool]]:
-        """Return providers in priority order."""
-
         providers = [
             (self.primary, self.primary_breaker, False),
             (self.fallback, self.fallback_breaker, True),
         ]
-
         if self.tertiary is not None and self.tertiary_breaker is not None:
             providers.append((self.tertiary, self.tertiary_breaker, True))
-
         return providers
 
     async def generate(
@@ -597,6 +593,9 @@ class LLMGateway:
         *,
         temperature: float = 0.2,
         max_tokens: int = 1000,
+        purpose: str = "chat",
+        prompt_version: str = "v1",
+        response_format: dict[str, Any] | None = None,
     ) -> GatewayResponse:
         """Try configured providers in priority order."""
 
@@ -609,8 +608,7 @@ class LLMGateway:
             provider_start = time.perf_counter()
 
             if not breaker.allow_request():
-                error = CircuitOpenError(f"{provider.name} circuit is open")
-                errors.append(str(error))
+                errors.append(f"{provider.name} circuit is open")
                 continue
 
             try:
@@ -619,8 +617,8 @@ class LLMGateway:
                     messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    response_format=response_format,
                 )
-
                 breaker.record_success()
 
                 input_tokens = (
@@ -634,7 +632,6 @@ class LLMGateway:
 
                 latency_ms = int((time.perf_counter() - start_time) * 1000)
                 provider_latency = int((time.perf_counter() - provider_start) * 1000)
-
                 total_cost = cost_inr(
                     result.model,
                     input_tokens,
@@ -652,6 +649,8 @@ class LLMGateway:
                     fallback_used=fallback_used,
                     model=result.model,
                     cost=total_cost,
+                    purpose=purpose,
+                    prompt_version=prompt_version,
                 )
 
                 return GatewayResponse(
@@ -669,7 +668,6 @@ class LLMGateway:
             except ProviderError as exc:
                 breaker.record_failure()
                 errors.append(f"{provider.name}: {exc}")
-
                 provider_latency = int((time.perf_counter() - provider_start) * 1000)
 
                 await self._record_call(
@@ -681,6 +679,8 @@ class LLMGateway:
                     input_tokens=estimated_input,
                     output_tokens=0,
                     fallback_used=fallback_used,
+                    purpose=purpose,
+                    prompt_version=prompt_version,
                 )
 
         if all(not breaker.allow_request() for _, breaker, _ in self._provider_sequence()):
@@ -725,10 +725,8 @@ class LLMGateway:
                     ):
                         if event.input_tokens is not None:
                             input_tokens = event.input_tokens
-
                         if event.output_tokens is not None:
                             output_tokens = event.output_tokens
-
                         if event.content:
                             received_content = True
                             content_parts.append(event.content)
@@ -746,23 +744,19 @@ class LLMGateway:
                         }
 
                     breaker.record_success()
-
                     complete_content = "".join(content_parts)
-
                     final_input = input_tokens if input_tokens is not None else estimated_input
                     final_output = (
                         output_tokens
                         if output_tokens is not None
                         else estimate_tokens(complete_content)
                     )
-
                     total_cost = cost_inr(
                         provider.model,
                         final_input,
                         final_output,
                         self.usd_to_inr,
                     )
-
                     provider_latency = int((time.perf_counter() - provider_start) * 1000)
 
                     await self._record_call(
@@ -793,7 +787,6 @@ class LLMGateway:
                 except ProviderError as exc:
                     if received_content:
                         breaker.record_failure()
-
                         await self._record_call(
                             request_id=request_id,
                             provider=provider,
@@ -810,6 +803,7 @@ class LLMGateway:
                         exc.status_code is not None
                         and exc.status_code not in RETRYABLE_STATUS_CODES
                     ):
+                        errors.append(f"{provider.name}: {exc}")
                         break
 
                     if attempt < self.retry_attempts - 1:
@@ -822,13 +816,8 @@ class LLMGateway:
                     else:
                         errors.append(f"{provider.name}: {exc}")
 
-            else:
-                continue
-
-            # Provider failed before producing output. Try the next provider.
             breaker.record_failure()
-
-            last_error = errors[-1] if errors else (f"{provider.name} failed")
+            last_error = errors[-1] if errors else f"{provider.name} failed"
 
             await self._record_call(
                 request_id=request_id,

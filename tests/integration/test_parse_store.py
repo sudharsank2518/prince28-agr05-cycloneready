@@ -142,3 +142,49 @@ async def test_successful_parse_clears_previous_failure(db_session):
 
     assert document.title == "Recovered Guide"
     assert failure is None
+
+
+async def test_reingestion_preserves_extracted_metadata(db_session):
+    parsed = ParsedDoc(
+        parser="pymupdf",
+        kind="pdf",
+        title="Cyclone Safety Guide",
+        pages=[
+            ParsedPage(
+                page_no=1,
+                text="Cyclone preparedness information.",
+                headings=["Cyclone Safety"],
+            )
+        ],
+    )
+
+    document = await save_document(
+        db_session,
+        path="data/raw/test/metadata-guide.pdf",
+        sha256="d" * 64,
+        source_url="https://example.com/metadata-guide.pdf",
+        licence="CC BY 4.0",
+        parsed=parsed,
+    )
+
+    document.metadata_ = {
+        **document.metadata_,
+        "doc_kind": "guideline",
+        "year": 2024,
+        "topics": ["cyclone preparedness"],
+    }
+    await db_session.flush()
+
+    updated = await save_document(
+        db_session,
+        path="data/raw/test/metadata-guide.pdf",
+        sha256="d" * 64,
+        source_url="https://example.com/metadata-guide.pdf",
+        licence="CC BY 4.0",
+        parsed=parsed,
+    )
+
+    assert updated.metadata_["doc_kind"] == "guideline"
+    assert updated.metadata_["year"] == 2024
+    assert updated.metadata_["topics"] == ["cyclone preparedness"]
+    assert updated.metadata_["parser"] == "pymupdf"

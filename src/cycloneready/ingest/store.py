@@ -74,6 +74,7 @@ async def save_document(
         document.sha256 = sha256
 
         document.metadata_ = {
+            **(document.metadata_ or {}),
             "parser": parsed.parser,
             "pages": len(parsed.pages),
             "tables": sum(page.tables for page in parsed.pages),
