@@ -8,6 +8,7 @@ import pytest
 from cycloneready.ingest.parse import (
     PAGE_CHARS,
     ParseError,
+    _ocr_page_text,
     _parse_ibtracs_csv,
     _split_pages,
     _table_to_markdown,
@@ -340,3 +341,28 @@ def test_ibtracs_skips_invalid_coordinates(tmp_path: Path):
 
     assert len(parsed.observations) == 1
     assert parsed.observations[0].storm_id == "TEST03"
+
+
+def test_ocr_page_text_returns_extracted_text():
+    """OCR helper should return cleaned text from the OCR text page."""
+
+    class FakePage:
+        def get_textpage_ocr(self, **kwargs):
+            assert kwargs == {"language": "eng", "dpi": 200, "full": True}
+            return "fake-text-page"
+
+        def get_text(self, textpage):
+            assert textpage == "fake-text-page"
+            return "  Cyclone preparedness\n\nGuidelines  "
+
+    assert _ocr_page_text(FakePage()) == "Cyclone preparedness\n\nGuidelines"
+
+
+def test_ocr_page_text_handles_ocr_failure():
+    """OCR errors should not stop normal PDF parsing."""
+
+    class FakePage:
+        def get_textpage_ocr(self, **kwargs):
+            raise RuntimeError("Tesseract is unavailable")
+
+    assert _ocr_page_text(FakePage()) == ""

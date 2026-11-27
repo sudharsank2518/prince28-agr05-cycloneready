@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import cast, func, select
+from sqlalchemy import cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +42,13 @@ class DocumentRepository:
                 elif key == "year":
                     year_value = int(value) if value.isdigit() else value
                     condition = cast(Document.metadata_, JSONB).contains({"year": year_value})
+
+                elif key in {"hazard", "phase"}:
+                    metadata_json = cast(Document.metadata_, JSONB)
+                    condition = or_(
+                        metadata_json.contains({key: [value]}),
+                        metadata_json.contains({key: value}),
+                    )
 
                 else:
                     condition = cast(Document.metadata_, JSONB).contains({key: value})
@@ -187,6 +194,7 @@ class DocumentRepository:
         offset: int = 0,
     ) -> dict | None:
         """Return paginated parsed pages for a document."""
+
         document_result = await self.session.execute(
             select(Document.id).where(Document.external_id == external_id)
         )

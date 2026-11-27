@@ -83,10 +83,26 @@ def is_transient_connection_error(error: DBAPIError) -> bool:
     return any(text in message for text in connection_errors)
 
 
+def resolve_selected_paths(paths: list[str]) -> set[Path]:
+    """Resolve selected file paths relative to the project root."""
+    selected = set()
+
+    for value in paths:
+        path = Path(value)
+
+        if not path.is_absolute():
+            path = ROOT / path
+
+        selected.add(path.resolve())
+
+    return selected
+
+
 async def process_corpus(
     limit: int | None,
     retry_failed: bool,
     reprocess: bool,
+    paths: list[str] | None = None,
 ) -> None:
     records = read_manifest()
 
@@ -96,8 +112,28 @@ async def process_corpus(
         if record.get("status") in {"downloaded", "not_modified"} and record.get("file_path")
     ]
 
+    # Select only explicitly requested files when --path is supplied.
+    if paths:
+        selected_paths = resolve_selected_paths(paths)
+
+        records = [
+            record for record in records if (ROOT / record["file_path"]).resolve() in selected_paths
+        ]
+
+        found_paths = {(ROOT / record["file_path"]).resolve() for record in records}
+
+        missing_paths = selected_paths - found_paths
+
+        if missing_paths:
+            missing = ", ".join(str(path) for path in sorted(missing_paths))
+            raise ValueError(
+                f"These selected files were not found as eligible manifest entries: {missing}"
+            )
+
     if limit is not None:
         records = records[:limit]
+
+    print(f"Files selected for parsing: {len(records)}")
 
     settings = get_settings()
     engine = make_engine(settings)
@@ -230,6 +266,12 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--path",
+        action="append",
+        help="Specific file path to parse. Can be supplied multiple times.",
+    )
+
+    parser.add_argument(
         "--retry-failed",
         action="store_true",
         help="Retry files that previously failed parsing.",
@@ -248,9 +290,10 @@ def main() -> None:
 
     asyncio.run(
         process_corpus(
-            args.limit,
-            args.retry_failed,
-            args.reprocess,
+            limit=args.limit,
+            retry_failed=args.retry_failed,
+            reprocess=args.reprocess,
+            paths=args.path,
         )
     )
 

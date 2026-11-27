@@ -255,8 +255,22 @@ def _table_to_markdown(table: list[list[str]]) -> str:
     return "\n".join(result)
 
 
+def _ocr_page_text(page: pymupdf.Page) -> str:
+    """Attempt English OCR for a page containing images."""
+    try:
+        textpage = page.get_textpage_ocr(
+            language="eng",
+            dpi=200,
+            full=True,
+        )
+        return clean_text(page.get_text(textpage=textpage))
+    except Exception:
+        # OCR is optional. Preserve normal parsing if Tesseract is unavailable.
+        return ""
+
+
 def _parse_pdf_pymupdf(path: Path) -> ParsedDoc:
-    """Extract PDF text, font-based headings, and detected tables."""
+    """Extract PDF text, headings, tables, and OCR scanned pages."""
     raw_pages = []
     page_tables = []
     page_headings = []
@@ -315,10 +329,8 @@ def _parse_pdf_pymupdf(path: Path) -> ParsedDoc:
                     if not content:
                         continue
 
-                    # Preserve all extracted text.
                     lines.append(content)
 
-                    # Check whether the text line is inside a table.
                     line_bbox = line.get("bbox")
                     inside_table = False
 
@@ -331,7 +343,6 @@ def _parse_pdf_pymupdf(path: Path) -> ParsedDoc:
                             for x0, y0, x1, y1 in table_regions
                         )
 
-                    # Do not classify table contents as headings.
                     if inside_table:
                         continue
 
@@ -350,7 +361,22 @@ def _parse_pdf_pymupdf(path: Path) -> ParsedDoc:
             if table_markdown:
                 page_text += "\n\n" + "\n\n".join(table_markdown)
 
-            raw_pages.append(clean_text(page_text))
+            page_text = clean_text(page_text)
+
+            # OCR only low-text pages that contain embedded images.
+            if len(page_text) < MIN_CHARS_PER_PAGE:
+                try:
+                    has_images = bool(page.get_images(full=True))
+                except Exception:
+                    has_images = False
+
+                if has_images:
+                    ocr_text = _ocr_page_text(page)
+
+                    if len(ocr_text) > len(page_text):
+                        page_text = ocr_text
+
+            raw_pages.append(page_text)
             page_tables.append(table_count)
             page_headings.append(headings)
 
