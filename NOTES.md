@@ -995,3 +995,22 @@ PyMuPDF remains the preferred PDF parser because it extracted more text and dete
 - The live document-pages endpoint has passing automated tests, but production deployment and live endpoint behavior require separate verification.
 
 **Corpus parsing, zero-failure verification, repeat-run idempotence, page numbering and database ingestion are verified. The limitations above remain explicitly open rather than being counted as completed tasks.**
+
+### Day 7 — PDF Parser Comparison
+
+Files compared: 10
+
+| File | PyMuPDF pages/chars/tables | pypdf pages/chars/tables | Verdict |
+|---|---:|---:|---|
+| data\manual_pdfs\SDRF_Guidelines_2026.pdf | 56/102834/0 | 56/102774/0 | PyMuPDF |
+| data\additional_pdfs\NIDM_Climate_Change_Extreme_Events_Risk_Reduction.pdf | 202/298765/1 | 202/298725/0 | PyMuPDF |
+| data\manual_pdfs\Urban_Flooding_Guidelines.pdf | 190/465921/12 | 190/460160/0 | PyMuPDF |
+| data\additional_pdfs\NIDM_Training_Module_Urban_Risk_Mitigation.pdf | 154/394397/218 | 154/291209/0 | PyMuPDF |
+| data\additional_pdfs\IMD_Cyclone_Warning_SOP.pdf | 204/387453/66 | 204/339656/0 | PyMuPDF |
+| data\additional_pdfs\NDMA_Management_of_Floods.pdf | 168/392210/42 | 168/375098/0 | PyMuPDF |
+| data\additional_pdfs\NDMA_Management_of_Cyclones.pdf | 190/471333/0 | 190/471398/0 | pypdf |
+| data\manual_pdfs\Cyclone_Risk_Management_Training_Module.pdf | 128/251200/31 | 128/213332/0 | PyMuPDF |
+| data\manual_pdfs\Tamil_Nadu_State_Disaster_Management_Policy_2023.pdf | 76/107387/2 | 76/106675/0 | PyMuPDF |
+| data\additional_pdfs\NDMA_Nuclear_Radiological_Emergencies.pdf | 170/431062/2 | 170/423568/0 | PyMuPDF |
+
+The automatic verdicts are preliminary and based on extracted character and table counts. Manual inspection of the SDRF Guidelines, Urban Flooding Guidelines, and Cyclone Risk Management Training Module is documented in the earlier section. PyMuPDF remains the preferred parser based on the combined comparison and inspection.

@@ -54,6 +54,14 @@ def read_pdf_files() -> list[Path]:
         if path.is_file() and path.suffix.lower() == ".pdf":
             paths.append(path)
 
+    # Include supplemental local PDFs without changing the production manifest.
+    additional_folder = ROOT / "data" / "additional_pdfs"
+    if additional_folder.is_dir():
+        paths.extend(path for path in additional_folder.glob("*.pdf") if path.is_file())
+
+    # Remove duplicate paths while preserving the original path objects.
+    paths = list(dict.fromkeys(path.resolve() for path in paths))
+
     return sorted(paths, key=lambda path: path.stat().st_size, reverse=True)
 
 
