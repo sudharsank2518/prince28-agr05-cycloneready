@@ -59,6 +59,7 @@ async def save_document(
                 "pages": len(parsed.pages),
                 "tables": sum(page.tables for page in parsed.pages),
                 "observations": len(parsed.observations),
+                "ocr_candidate_pages": parsed.ocr_candidate_pages,
                 "path": path,
             },
         )
