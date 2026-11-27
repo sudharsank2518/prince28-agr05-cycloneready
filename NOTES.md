@@ -887,3 +887,111 @@ The full confusion tables and incorrect predictions are documented in the Prompt
 ### Day 9 status
 
 All MUST tasks and all four stretch tasks completed.
+
+### Day 7 — PDF Parser Comparison
+
+Files compared: 4
+
+| File | PyMuPDF pages/chars/tables | pypdf pages/chars/tables | Verdict |
+|---|---:|---:|---|
+| data\manual_pdfs\SDRF_Guidelines_2026.pdf | 56/102834/0 | 56/102774/0 | PyMuPDF |
+| data\manual_pdfs\Urban_Flooding_Guidelines.pdf | 190/465921/12 | 190/460160/0 | PyMuPDF |
+| data\manual_pdfs\Cyclone_Risk_Management_Training_Module.pdf | 128/251200/31 | 128/213332/0 | PyMuPDF |
+| data\manual_pdfs\Tamil_Nadu_State_Disaster_Management_Policy_2023.pdf | 76/107387/2 | 76/106675/0 | PyMuPDF |
+
+The verdict is preliminary and based on extracted character and table counts.
+Manually inspect at least three documents before selecting the preferred parser.
+
+### Day 7 — Manual inspection and parser decision
+
+Three real PDF documents were manually inspected using PyMuPDF.
+The first, middle and last pages of each document were sampled.
+
+| Document | Manual inspection findings |
+|---|---|
+| SDRF Guidelines | Text and headings were extracted on pages 1 and 29. Page 56 contained table-like content in the extracted text, but the parser reported zero detected tables. |
+| Urban Flooding Guidelines | Page 1 returned no extractable text. Page 96 contained extracted text and one detected table. Page 190 returned no extractable text in the sample. The parser detected tables on 11 pages overall. |
+| Cyclone Risk Management Training Module | Headings and text were extracted on pages 1, 65 and 128. The parser detected tables on multiple pages, including pages 12, 19, 51, 54 and 61–62. |
+
+#### Parser execution time
+
+| Document | PyMuPDF | pypdf |
+|---|---:|---:|
+| SDRF Guidelines | 6.827 s | 3.144 s |
+| Urban Flooding Guidelines | 41.218 s | 14.756 s |
+| Cyclone Risk Management Training Module | 15.337 s | 6.570 s |
+| Tamil Nadu State Disaster Management Policy | 7.801 s | 3.663 s |
+
+#### Preferred parser and reasoning
+
+PyMuPDF is selected as the preferred PDF parser for this project.
+
+Across the four real PDFs, both parsers extracted all 450 pages.
+PyMuPDF extracted 927,342 characters and detected 45 tables.
+pypdf extracted 882,941 characters and detected zero tables.
+
+pypdf was faster on all four documents. However, PyMuPDF extracted more text from each document and detected tables that pypdf did not detect. For CycloneReady's disaster-management documents, retaining more text and identifying table content is more important than minimizing parsing time.
+
+Manual inspection also identified limitations: some pages returned no extractable text, and table-like content was not always detected as a table. These cases should be considered for future parser improvements.
+
+#### Corpus and comparison limitations
+
+The real downloaded/manual corpus used for this comparison contains four PDFs and one CSV. No real HTML files were available for a trafilatura-versus-strip-tags comparison. Therefore, the HTML parser comparison and a ten-file real PDF/HTML comparison remain outstanding if required by the Day 7 brief.
+
+The ten-PDF synthetic benchmark is separate from this real-document comparison and is not counted as ten real corpus files.
+
+### D07 · Parsing my corpus — final verification
+
+#### Corpus coverage and failure status
+
+- Distinct usable local files: 5 (4 PDFs and 1 IBTrACS CSV).
+- Successfully parsed documents: 5 of 5 (100% of usable local files).
+- Database page records: 5,851 (450 PDF pages and 5,401 CSV pages).
+- Parse failures: 0.
+- Failure-reason query: no rows returned.
+- The NOAA IBTrACS source URL blocked by collection policy is excluded from usable-file coverage.
+- No parser failure required fixing because the verified failure count was zero.
+
+#### Idempotence verification
+
+The manifest-based parser was executed repeatedly without reprocessing.
+
+- Repeat execution: Processed 0, Failed 0, Skipped 5, Total 5.
+- All five files were recognized as already parsed.
+- Database counts after the repeat execution remained unchanged:
+  - Parsed documents: 5.
+  - Database pages: 5,851.
+  - Parse failures: 0.
+  - Cyclone observations: 175,595.
+
+This confirms that repeated parser execution did not create duplicate document, page or cyclone-observation records.
+
+#### Page numbering and heading verification
+
+- Verified page records for all five parsed documents.
+- Page numbers started at 1 and continued through each document's recorded final page.
+- Invalid page-number counts: 0.
+- Heading extraction was verified using stored JSONB heading paths.
+- Example: Tamil Nadu State Disaster Management Policy, page 7, contains headings including `1. Preamble`, `1.1`, `The Context`, `1.2.` and `Disaster Risk in Tamil Nadu`.
+- Some extracted heading entries are fragments rather than complete hierarchical headings; heading extraction is useful but not perfect.
+
+#### Table extraction verification
+
+- PDF table content is stored as Markdown within `pages.text`; the database does not have a separate page-table column.
+- Example: Tamil Nadu State Disaster Management Policy, page 5, contains a Markdown grid table.
+- Urban Flooding Guidelines, page 62, contains `Table 3.2: Flood Management Decision Support System`.
+- Table-like content is not always detected as a structured table, as noted in the manual inspection findings.
+
+#### Parser decision
+
+PyMuPDF remains the preferred PDF parser because it extracted more text and detected tables across the four real PDFs. pypdf was faster but did not detect tables in the comparison.
+
+#### Remaining limitations
+
+- The real corpus contains only four PDFs and one CSV; a ten-file real PDF/HTML comparison is not available from this corpus.
+- No real HTML files were available for a trafilatura-versus-simple-tag-stripping comparison.
+- Thirteen PDF pages have no extractable text. These pages require further inspection to determine whether OCR is appropriate.
+- OCR implementation and scanned-page detection have not been verified as completed.
+- The live document-pages endpoint has passing automated tests, but production deployment and live endpoint behavior require separate verification.
+
+**Corpus parsing, zero-failure verification, repeat-run idempotence, page numbering and database ingestion are verified. The limitations above remain explicitly open rather than being counted as completed tasks.**
