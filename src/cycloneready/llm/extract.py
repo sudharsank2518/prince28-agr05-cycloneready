@@ -1,7 +1,6 @@
 """Extract and validate structured metadata from CycloneReady documents."""
 
 import json
-import re
 
 from pydantic import ValidationError
 
@@ -34,8 +33,10 @@ def metadata_response_format() -> dict:
                 "maxLength",
             ):
                 value.pop(key, None)
+
             for child in value.values():
                 clean_schema(child)
+
         elif isinstance(value, list):
             for child in value:
                 clean_schema(child)
@@ -91,11 +92,80 @@ async def extract_metadata(
     except ValidationError as exc:
         raise ExtractionError("LLM metadata failed DocMeta validation.") from exc
 
-    if metadata.year is not None:
-        year_pattern = rf"(?<!\\d){metadata.year}(?!\\d)"
-        if re.search(year_pattern, document_text) is None:
-            raise ExtractionError(
-                f"Extracted year {metadata.year} does not appear in the source document."
-            )
-
     return metadata, result
+
+
+def chunk_pages(
+    page_texts: list[str],
+    max_chars: int = 20000,
+) -> list[str]:
+    """Group page text into manageable chunks without losing words."""
+    if max_chars < 1:
+        raise ValueError("max_chars must be at least 1")
+
+    chunks = []
+    current_parts = []
+    current_length = 0
+
+    for page in page_texts:
+        if not page or not page.strip():
+            continue
+
+        words = page.split()
+
+        for word in words:
+            if len(word) > max_chars:
+                raise ExtractionError("A single word exceeds the maximum chunk size.")
+
+            separator_length = 1 if current_parts else 0
+
+            if current_length + separator_length + len(word) > max_chars:
+                chunks.append(" ".join(current_parts))
+                current_parts = []
+                current_length = 0
+                separator_length = 0
+
+            current_parts.append(word)
+            current_length += separator_length + len(word)
+
+    if current_parts:
+        chunks.append(" ".join(current_parts))
+
+    return chunks
+
+
+def merge_metadata(results: list[DocMeta]) -> DocMeta:
+    """Merge metadata extracted from document chunks."""
+    if not results:
+        raise ExtractionError("No chunk metadata was provided.")
+
+    years = [item.year for item in results]
+
+    year = years[0] if years[0] is not None and all(item == years[0] for item in years) else None
+
+    def unique_values(field: str) -> list[str]:
+        values = []
+        seen = set()
+
+        for item in results:
+            for value in getattr(item, field):
+                normalized = value.strip()
+
+                if normalized and normalized.casefold() not in seen:
+                    seen.add(normalized.casefold())
+                    values.append(normalized)
+
+        return values
+
+    return DocMeta(
+        doc_kind=results[0].doc_kind,
+        year=year,
+        language=results[0].language,
+        summary=results[0].summary,
+        topics=unique_values("topics"),
+        hazard=unique_values("hazard"),
+        phase=unique_values("phase"),
+        action=unique_values("action"),
+        responsible=unique_values("responsible"),
+        warning_stage=unique_values("warning_stage"),
+    )
