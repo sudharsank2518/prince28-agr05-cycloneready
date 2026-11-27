@@ -6,7 +6,7 @@ from sqlalchemy import cast, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cycloneready.db.models import Document
+from cycloneready.db.models import Document, Page
 
 
 class DocumentRepository:
@@ -178,4 +178,49 @@ class DocumentRepository:
             "published_on": (document.published_on.isoformat() if document.published_on else None),
             **document.metadata_,
             "document": document.document,
+        }
+
+    async def get_pages(
+        self,
+        external_id: str,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict | None:
+        """Return paginated parsed pages for a document."""
+        document_result = await self.session.execute(
+            select(Document.id).where(Document.external_id == external_id)
+        )
+        document_id = document_result.scalar_one_or_none()
+
+        if document_id is None:
+            return None
+
+        count_result = await self.session.execute(
+            select(func.count(Page.id)).where(Page.document_id == document_id)
+        )
+        total = count_result.scalar_one()
+
+        page_result = await self.session.execute(
+            select(Page)
+            .where(Page.document_id == document_id)
+            .order_by(Page.page_no)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        pages = page_result.scalars().all()
+
+        return {
+            "document_id": external_id,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "items": [
+                {
+                    "page_no": page.page_no,
+                    "text": page.text,
+                    "headings": page.headings or [],
+                }
+                for page in pages
+            ],
         }

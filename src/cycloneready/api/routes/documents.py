@@ -59,6 +59,29 @@ async def list_documents(
     }
 
 
+@router.get("/{doc_id}/pages")
+async def get_document_pages(
+    doc_id: str,
+    session: DbSessionDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict:
+    repository = DocumentRepository(session)
+    result = await repository.get_pages(
+        external_id=doc_id,
+        limit=limit,
+        offset=offset,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No document with id '{doc_id}'.",
+        )
+
+    return result
+
+
 @router.get("/{doc_id}")
 async def get_document(
     doc_id: str,

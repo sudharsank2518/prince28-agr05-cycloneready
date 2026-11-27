@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from cycloneready.api.main import create_app
 from cycloneready.config import Settings
-from cycloneready.db.models import Base, Document
+from cycloneready.db.models import Base, Document, Page
 
 SAMPLE = [
     {
@@ -54,16 +54,39 @@ def client(tmp_path):
                     json.dumps(record, sort_keys=True).encode("utf-8")
                 ).hexdigest()
 
-                session.add(
-                    Document(
-                        external_id=record["id"],
-                        title=record["title"],
-                        doc_type="record",
-                        published_on=date.fromisoformat(record["published_on"]),
-                        sha256=fingerprint,
-                        metadata_={"year": record["year"]},
-                    )
+                document = Document(
+                    external_id=record["id"],
+                    title=record["title"],
+                    doc_type="record",
+                    published_on=date.fromisoformat(record["published_on"]),
+                    sha256=fingerprint,
+                    metadata_={"year": record["year"]},
                 )
+                session.add(document)
+
+                if record["id"] == "001":
+                    session.add_all(
+                        [
+                            Page(
+                                document=document,
+                                page_no=1,
+                                text="Alpha page one",
+                                headings=["Introduction"],
+                            ),
+                            Page(
+                                document=document,
+                                page_no=2,
+                                text="Alpha page two",
+                                headings=["Guidelines", "Section 1"],
+                            ),
+                            Page(
+                                document=document,
+                                page_no=3,
+                                text="Alpha page three",
+                                headings=["Conclusion"],
+                            ),
+                        ]
+                    )
 
             await session.commit()
 

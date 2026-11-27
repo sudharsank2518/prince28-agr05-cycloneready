@@ -141,3 +141,42 @@ def test_sort_documents_by_published_on_descending(client):
         "2024-06-20",
         "2023-01-15",
     ]
+
+
+def test_get_document_pages_paginates(client):
+    first = client.get("/v1/documents/001/pages", params={"limit": 2})
+    assert first.status_code == 200
+
+    body = first.json()
+    assert body["document_id"] == "001"
+    assert body["total"] == 3
+    assert body["limit"] == 2
+    assert body["offset"] == 0
+    assert [page["page_no"] for page in body["items"]] == [1, 2]
+    assert body["items"][0]["headings"] == ["Introduction"]
+    assert body["items"][1]["headings"] == ["Guidelines", "Section 1"]
+
+    second = client.get(
+        "/v1/documents/001/pages",
+        params={"limit": 2, "offset": 2},
+    )
+    assert second.status_code == 200
+    assert [page["page_no"] for page in second.json()["items"]] == [3]
+
+
+def test_get_document_pages_missing_document(client):
+    response = client.get("/v1/documents/999/pages")
+
+    assert response.status_code == 404
+    assert response.headers["content-type"] == "application/problem+json"
+    assert response.json()["status"] == 404
+
+
+def test_get_document_pages_rejects_invalid_limit(client):
+    response = client.get(
+        "/v1/documents/001/pages",
+        params={"limit": 0},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["field"] == "query.limit"

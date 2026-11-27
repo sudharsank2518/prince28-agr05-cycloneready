@@ -16,11 +16,21 @@ The reuse of each document is subject to its source-specific licence or terms. T
 - Files collected: 5
 - PDF pages: 450
 - Extracted text tokens (approx.): 4,248,770
-- Scanned or text-empty PDF pages: 13
+- PDF pages with no extractable text: 13
 - Files with PDF extraction errors: 0
 - Disk usage: 66.56 MB
 
 Token counts are approximate character-based estimates, not exact counts from a language-model tokenizer.
+
+## Database parsing verification
+
+- Downloaded local files parsed: 5 of 5 (100%).
+- Parse failures: 0.
+- Parsed documents: 5 (4 PDFs and 1 cyclone CSV).
+- Database page records: 5,851.
+- Coverage excludes the source URL blocked by the collection policy.
+
+These figures were verified separately against the Neon PostgreSQL database.
 
 ## Source summary
 
@@ -74,6 +84,6 @@ It is planned project content and is not yet counted as a collected dataset file
 - IBTrACS does not independently validate every preparedness or response recommendation.
 - Missing wind-speed and pressure values must remain unknown, not be treated as zero.
 - The collected dataset includes 450 PDF pages across four PDF documents.
-- Thirteen PDF pages are scanned or text-empty and may require OCR.
+- Thirteen PDF pages have no extractable text; inspect them to determine whether OCR is needed.
 - Urban flood-specific historical datasets may be added after their sources and licences are reviewed.
 - Unknown file formats are not included in extracted text estimates.
