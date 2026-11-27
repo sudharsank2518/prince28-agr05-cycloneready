@@ -936,9 +936,9 @@ Manual inspection also identified limitations: some pages returned no extractabl
 
 #### Corpus and comparison limitations
 
-The real downloaded/manual corpus used for this comparison contains four PDFs and one CSV. No real HTML files were available for a trafilatura-versus-strip-tags comparison. Therefore, the HTML parser comparison and a ten-file real PDF/HTML comparison remain outstanding if required by the Day 7 brief.
+The original corpus parsing verification covered four PDFs and one IBTrACS CSV. The separate real-PDF parser comparison was subsequently expanded to ten PDFs, as documented in the comparison table below. A separate HTML extraction benchmark compared Trafilatura with Python HTMLParser on three official HTML pages. These are separate benchmarks; they do not constitute a combined ten-file PDF/HTML benchmark.
 
-The ten-PDF synthetic benchmark is separate from this real-document comparison and is not counted as ten real corpus files.
+The ten-PDF synthetic benchmark remains separate from the real-document comparison.
 
 ### D07 · Parsing my corpus — final verification
 
@@ -988,13 +988,14 @@ PyMuPDF remains the preferred PDF parser because it extracted more text and dete
 
 #### Remaining limitations
 
-- The real corpus contains only four PDFs and one CSV; a ten-file real PDF/HTML comparison is not available from this corpus.
-- No real HTML files were available for a trafilatura-versus-simple-tag-stripping comparison.
-- Thirteen PDF pages have no extractable text. These pages require further inspection to determine whether OCR is appropriate.
-- OCR implementation and scanned-page detection have not been verified as completed.
-- The live document-pages endpoint has passing automated tests, but production deployment and live endpoint behavior require separate verification.
+- The verified initial ingestion corpus contained four PDFs and one IBTrACS CSV; this should not be confused with the separate ten-PDF parser comparison.
+- The HTML benchmark covered three official pages only. It is not a comprehensive HTML corpus benchmark.
+- Thirteen pages were previously identified as having no extractable text in the initial PDF inspection. Optional Tesseract OCR support was subsequently added and tested with a scanned PDF. Not every previously blank page has been independently verified as successfully recovered.
+- OCR can introduce recognition errors. The live SDRF page response also demonstrates that extracted text quality is not perfect.
+- The HTML benchmark showed that JavaScript-driven pages and pages linking to separate PDF/image resources need additional ingestion handling.
+- The production API check verified one 56-page PDF document and pagination for pages 1–6. It did not exhaustively test every document or every page.
 
-**Corpus parsing, zero-failure verification, repeat-run idempotence, page numbering and database ingestion are verified. The limitations above remain explicitly open rather than being counted as completed tasks.**
+**Day 7 parser implementation, PDF comparisons, HTML benchmark, OCR implementation/testing, corpus ingestion and live document-pages API verification are completed. The limitations above remain documented for future quality improvements, not as unfinished Day 7 implementation tasks.**
 
 ### Day 7 — PDF Parser Comparison
 
@@ -1014,3 +1015,22 @@ Files compared: 10
 | data\additional_pdfs\NDMA_Nuclear_Radiological_Emergencies.pdf | 170/431062/2 | 170/423568/0 | PyMuPDF |
 
 The automatic verdicts are preliminary and based on extracted character and table counts. Manual inspection of the SDRF Guidelines, Urban Flooding Guidelines, and Cyclone Risk Management Training Module is documented in the earlier section. PyMuPDF remains the preferred parser based on the combined comparison and inspection.
+
+
+### Day 7 — Final completion record (27 November 2026)
+
+- [x] PDF parser comparison completed on ten real PDF documents.
+- [x] Manual inspection and PyMuPDF parser decision documented.
+- [x] Corpus parsing, database ingestion and idempotence verified.
+- [x] OCR support implemented and tested with a scanned PDF.
+- [x] HTML extraction benchmark completed for three official HTML pages.
+- [x] HTML benchmark and source-review findings committed in `3601d24`.
+- [x] Live Render OpenAPI confirms `/v1/documents/{doc_id}/pages`.
+- [x] Live document listing returned 55 records.
+- [x] Live SDRF document page endpoint returned page text and headings (56 total pages).
+- [x] Pagination verified: offset 0 returned pages 1–3; offset 3 returned pages 4–6.
+- [x] Full unit test suite passed: 117 tests.
+- [x] Integration test suite passed: 16 tests.
+- [x] Ruff checks and commit hooks passed.
+
+**Day 7 implementation, benchmarking, OCR testing, production endpoint verification and documentation are complete. Remaining limitations are recorded as future improvements.**
