@@ -45,6 +45,20 @@ def test_pdf_page_numbers_and_text(tmp_path: Path):
     assert "Flood safety" in parsed.pages[0].text
 
 
+def test_pdf_detects_page_without_extractable_text(tmp_path: Path):
+    path = create_pdf(
+        tmp_path / "mixed.pdf",
+        ["Cyclone preparedness information " * 5, ""],
+    )
+
+    parsed = parse_file(path)
+
+    assert len(parsed.pages) == 2
+    assert len(parsed.pages[0].text) >= 50
+    assert len(parsed.pages[1].text) < 50
+    assert parsed.ocr_candidate_pages == [2]
+
+
 def test_pdf_pypdf_alternative(tmp_path: Path):
     path = create_pdf(
         tmp_path / "guide.pdf",

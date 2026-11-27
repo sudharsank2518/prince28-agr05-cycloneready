@@ -54,6 +54,7 @@ class ParsedDoc:
     title: str
     pages: list[ParsedPage]
     observations: list[CycloneObservationData] = field(default_factory=list)
+    ocr_candidate_pages: list[int] = field(default_factory=list)
 
 
 class ParseError(Exception):
@@ -382,6 +383,7 @@ def _parse_pdf_pymupdf(path: Path) -> ParsedDoc:
         kind="pdf",
         title=path.stem,
         pages=pages,
+        ocr_candidate_pages=[page.page_no for page in pages if len(page.text) < MIN_CHARS_PER_PAGE],
     )
 
 

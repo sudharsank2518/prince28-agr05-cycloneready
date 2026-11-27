@@ -45,6 +45,7 @@ async def test_save_document_stores_pages_and_headings(db_session):
                 headings=["Cyclone Safety", "Flood Safety"],
             ),
         ],
+        ocr_candidate_pages=[2],
     )
 
     document = await save_document(
@@ -69,6 +70,7 @@ async def test_save_document_stores_pages_and_headings(db_session):
     assert document.metadata_["parser"] == "pymupdf"
     assert document.metadata_["pages"] == 2
     assert document.metadata_["tables"] == 1
+    assert document.metadata_["ocr_candidate_pages"] == [2]
     assert len(pages) == 2
     assert pages[0].page_no == 1
     assert pages[0].headings == ["Cyclone Safety", "Preparation"]
@@ -141,6 +143,7 @@ async def test_successful_parse_clears_previous_failure(db_session):
     failure = await db_session.scalar(select(ParseFailure).where(ParseFailure.path == path))
 
     assert document.title == "Recovered Guide"
+    assert document.metadata_["ocr_candidate_pages"] == []
     assert failure is None
 
 
@@ -156,6 +159,7 @@ async def test_reingestion_preserves_extracted_metadata(db_session):
                 headings=["Cyclone Safety"],
             )
         ],
+        ocr_candidate_pages=[1],
     )
 
     document = await save_document(
@@ -188,3 +192,4 @@ async def test_reingestion_preserves_extracted_metadata(db_session):
     assert updated.metadata_["year"] == 2024
     assert updated.metadata_["topics"] == ["cyclone preparedness"]
     assert updated.metadata_["parser"] == "pymupdf"
+    assert updated.metadata_["ocr_candidate_pages"] == [1]
