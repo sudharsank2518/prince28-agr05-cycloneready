@@ -180,3 +180,49 @@ def test_get_document_pages_rejects_invalid_limit(client):
 
     assert response.status_code == 422
     assert response.json()["errors"][0]["field"] == "query.limit"
+
+
+def test_ingest_stats_returns_status_counts_and_oldest_age(client):
+    import asyncio
+    from datetime import UTC, datetime, timedelta
+
+    from cycloneready.db.models import IngestItem, IngestJob
+
+    async def add_ingest_items():
+        async with client.app.state.sessionmaker() as session:
+            job = IngestJob(
+                id="test-ingest-stats",
+                requested=4,
+                created_at=datetime.now(UTC) - timedelta(seconds=120),
+                items=[
+                    IngestItem(record={"title": "Queued"}, status="queued"),
+                    IngestItem(record={"title": "Processing"}, status="processing"),
+                    IngestItem(record={"title": "Completed"}, status="completed"),
+                    IngestItem(record={"title": "Dead"}, status="dead"),
+                ],
+            )
+            session.add(job)
+            await session.commit()
+
+    asyncio.run(add_ingest_items())
+
+    response = client.get(
+        "/v1/ingest/stats",
+        headers={"X-Admin-Token": "test-admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["counts"] == {
+        "queued": 1,
+        "processing": 1,
+        "completed": 1,
+        "dead": 1,
+    }
+    assert body["oldest_queued_age_seconds"] >= 100
+
+
+def test_ingest_stats_requires_admin_token(client):
+    response = client.get("/v1/ingest/stats")
+
+    assert response.status_code == 401

@@ -218,3 +218,67 @@ class LlmCall(Base):
         server_default=func.now(),
         index=True,
     )
+
+
+class IngestJob(Base):
+    """One request to ingest a batch of documents."""
+
+    __tablename__ = "ingest_jobs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    requested: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    items: Mapped[list["IngestItem"]] = relationship(
+        back_populates="job",
+        cascade="all, delete-orphan",
+    )
+
+
+class IngestItem(Base):
+    """One document waiting to be processed by an ingestion worker."""
+
+    __tablename__ = "ingest_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    job_id: Mapped[str] = mapped_column(
+        ForeignKey("ingest_jobs.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    record: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+    status: Mapped[str] = mapped_column(
+        String(10),
+        server_default="queued",
+        index=True,
+    )
+
+    attempts: Mapped[int] = mapped_column(
+        Integer,
+        server_default="0",
+    )
+
+    error: Mapped[str] = mapped_column(
+        Text,
+        server_default="",
+    )
+
+    pages: Mapped[int] = mapped_column(
+        Integer,
+        server_default="0",
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    job: Mapped["IngestJob"] = relationship(
+        back_populates="items",
+    )
