@@ -46,7 +46,20 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
     usd_to_inr: float = 95.0
 
+    # Prompt directory
     prompts_dir: Path = Path("prompts")
+
+    # Background ingestion queue (Day 10)
+    redis_url: str = "redis://localhost:6379"
+    manifest_file: Path = Path("data/manifest.jsonl")
+    admin_token: str = ""
+    worker_in_api: bool = False
+
+    # Worker limits
+    ingest_concurrency: int = 1
+    ingest_rpm: float = 12.0
+    ingest_job_timeout: int = 600
+    ingest_max_tries: int = 3
 
     @field_validator("database_url")
     @classmethod

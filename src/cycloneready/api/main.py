@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI
 
 from cycloneready.api.errors import register_error_handlers
 from cycloneready.api.middleware import request_context
-from cycloneready.api.routes import chat, cyclones, documents, health, llm
+from cycloneready.api.routes import chat, cyclones, documents, health, ingest, llm
 from cycloneready.config import Settings, get_settings
 from cycloneready.db.session import make_engine, make_sessionmaker
 from cycloneready.llm import create_llm_gateway
@@ -68,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(cyclones.router)
     v1.include_router(chat.router)
     v1.include_router(llm.router)
+    v1.include_router(ingest.router)
 
     app.include_router(health.router)
     app.include_router(v1)

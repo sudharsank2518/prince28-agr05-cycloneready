@@ -40,6 +40,7 @@ def client(tmp_path):
     settings = Settings(
         app_env="ci",
         database_url=database_url,
+        admin_token="test-admin-token",
     )
 
     app = create_app(settings)

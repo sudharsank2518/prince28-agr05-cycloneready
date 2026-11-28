@@ -79,6 +79,7 @@ async def extract_metadata(
         purpose="extract",
         prompt_version=version,
         temperature=0,
+        max_tokens=2000,
         response_format=metadata_response_format(),
     )
 
@@ -97,7 +98,7 @@ async def extract_metadata(
 
 def chunk_pages(
     page_texts: list[str],
-    max_chars: int = 20000,
+    max_chars: int = 4000,
 ) -> list[str]:
     """Group page text into manageable chunks without losing words."""
     if max_chars < 1:

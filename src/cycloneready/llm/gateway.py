@@ -24,6 +24,21 @@ PRICES_USD = {
 RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 
 
+def is_daily_quota_error(message: str) -> bool:
+    """Identify provider daily quota exhaustion errors."""
+    message = message.lower()
+    return any(
+        marker in message
+        for marker in (
+            "tokens per day",
+            "token per day",
+            "tpd",
+            "requests per day",
+            "request per day",
+        )
+    )
+
+
 class ProviderError(Exception):
     """Raised when an LLM provider request fails."""
 
@@ -33,10 +48,12 @@ class ProviderError(Exception):
         *,
         status_code: int | None = None,
         retry_after: float | None = None,
+        quota_exhausted: bool = False,
     ):
         super().__init__(message)
         self.status_code = status_code
         self.retry_after = retry_after
+        self.quota_exhausted = quota_exhausted
 
 
 class CircuitOpenError(ProviderError):
@@ -238,10 +255,13 @@ class OpenAICompatibleProvider:
 
         except httpx.HTTPStatusError as exc:
             response = exc.response
+            error_text = response.text
+
             raise ProviderError(
-                f"{self.name} returned HTTP {response.status_code}: {response.text[:500]}",
+                f"{self.name} returned HTTP {response.status_code}: {error_text[:500]}",
                 status_code=response.status_code,
                 retry_after=parse_retry_after(response.headers.get("Retry-After")),
+                quota_exhausted=(response.status_code == 429 and is_daily_quota_error(error_text)),
             ) from exc
         except httpx.TimeoutException as exc:
             raise ProviderError(f"{self.name} request timed out") from exc
@@ -329,10 +349,13 @@ class OpenAICompatibleProvider:
 
         except httpx.HTTPStatusError as exc:
             response = exc.response
+            error_text = response.text
+
             raise ProviderError(
-                f"{self.name} returned HTTP {response.status_code}: {response.text[:500]}",
+                f"{self.name} returned HTTP {response.status_code}: {error_text[:500]}",
                 status_code=response.status_code,
                 retry_after=parse_retry_after(response.headers.get("Retry-After")),
+                quota_exhausted=(response.status_code == 429 and is_daily_quota_error(error_text)),
             ) from exc
         except httpx.TimeoutException as exc:
             raise ProviderError(f"{self.name} streaming request timed out") from exc
@@ -543,7 +566,7 @@ class LLMGateway:
         max_tokens: int,
         response_format: dict[str, Any] | None = None,
     ) -> ProviderResponse:
-        """Retry retryable provider errors before reporting failure."""
+        """Retry temporary provider errors, but not exhausted daily quotas."""
 
         last_error: ProviderError | None = None
 
@@ -555,14 +578,21 @@ class LLMGateway:
                         temperature=temperature,
                         max_tokens=max_tokens,
                     )
+
                 return await provider.generate(
                     messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                     response_format=response_format,
                 )
+
             except ProviderError as exc:
                 last_error = exc
+
+                # A daily quota cannot be fixed by waiting a few seconds.
+                if exc.quota_exhausted:
+                    raise
+
                 if exc.status_code is not None and exc.status_code not in RETRYABLE_STATUS_CODES:
                     raise
 
@@ -578,6 +608,7 @@ class LLMGateway:
             f"{provider.name} failed after {self.retry_attempts} attempts: {last_error}",
             status_code=last_error.status_code if last_error else None,
             retry_after=last_error.retry_after if last_error else None,
+            quota_exhausted=last_error.quota_exhausted if last_error else False,
         ) from last_error
 
     def _provider_sequence(self) -> list[tuple[Any, CircuitBreaker, bool]]:
@@ -605,6 +636,7 @@ class LLMGateway:
         start_time = time.perf_counter()
         estimated_input = estimate_messages_tokens(messages)
         errors: list[str] = []
+        quota_exhausted = False
 
         for provider, breaker, fallback_used in self._provider_sequence():
             provider_start = time.perf_counter()
@@ -669,6 +701,7 @@ class LLMGateway:
 
             except ProviderError as exc:
                 breaker.record_failure()
+                quota_exhausted = quota_exhausted or exc.quota_exhausted
                 errors.append(f"{provider.name}: {exc}")
                 provider_latency = int((time.perf_counter() - provider_start) * 1000)
 
@@ -687,10 +720,14 @@ class LLMGateway:
 
         if all(not breaker.allow_request() for _, breaker, _ in self._provider_sequence()):
             raise CircuitOpenError(
-                "All configured provider circuits are open. " + "; ".join(errors)
+                "All configured provider circuits are open. " + "; ".join(errors),
+                quota_exhausted=quota_exhausted,
             )
 
-        raise ProviderError("All configured providers failed. " + "; ".join(errors))
+        raise ProviderError(
+            "All configured providers failed. " + "; ".join(errors),
+            quota_exhausted=quota_exhausted,
+        )
 
     async def stream(
         self,
@@ -705,6 +742,7 @@ class LLMGateway:
         start_time = time.perf_counter()
         estimated_input = estimate_messages_tokens(messages)
         errors: list[str] = []
+        quota_exhausted = False
 
         for provider, breaker, fallback_used in self._provider_sequence():
             provider_start = time.perf_counter()
@@ -801,6 +839,11 @@ class LLMGateway:
                         )
                         raise
 
+                    if exc.quota_exhausted:
+                        quota_exhausted = True
+                        errors.append(f"{provider.name}: {exc}")
+                        break
+
                     if (
                         exc.status_code is not None
                         and exc.status_code not in RETRYABLE_STATUS_CODES
@@ -833,5 +876,6 @@ class LLMGateway:
             )
 
         raise ProviderError(
-            "All configured providers failed during streaming. " + "; ".join(errors)
+            "All configured providers failed during streaming. " + "; ".join(errors),
+            quota_exhausted=quota_exhausted,
         )

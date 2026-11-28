@@ -1272,3 +1272,20 @@ Remaining Git review, final test verification and any required documentation com
 | Day 9 extraction corpus | Five PDFs, 918 pages, 99 chunks |
 
 **Project note:** The test results in this document come from different development checkpoints and test scopes. They are historical evidence and should not be combined into one total. Current test results should be obtained again before the final project submission.
+
+## Day 10 STRETCH — Ingestion Stats
+
+- Added GET /v1/ingest/stats with admin authentication.
+- Returns counts for queued, processing, completed, and dead items.
+- Returns oldest queued age in seconds.
+- Added tests for status counts, queued age, and admin authentication.
+- API tests: 19 passed.
+- Recovery tests: 2 passed using a mocked Redis pool.
+- Full unit suite: 138 passed.
+- Full lint: passed (116 files formatted).
+- Neon database snapshot at the time of verification:
+  - Queued: 1
+  - Processing: 1
+  - Completed: 6
+  - Dead: 2
+  - Oldest queued age: 37,475 seconds.
